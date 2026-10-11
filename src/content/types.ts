@@ -1,49 +1,20 @@
-// Content item shapes (spec §6, plan.md §1.3). These hold the answer keys, so only
-// src/content/ and scripts/ (content:sync) may import them.
-//
-// NOTE: `feat/shared-contracts` will add the canonical content item types to
-// src/types/game.ts. Once it merges, these should re-export from there instead.
+// Content item shapes come from the shared contract (src/types/game.ts). They hold the answer
+// keys, so only src/content/ and scripts/ (content:sync) may import this folder.
+import { GAME_LIMITS } from '../types/game'
 
-export interface TriviaChoice {
-  id: string
-  label: string
-}
-
-export type Difficulty = 'easy' | 'medium' | 'hard'
-
-export interface TriviaItem {
-  id: string
-  type: 'trivia'
-  prompt: string
-  choices: TriviaChoice[]
-  correctChoiceId: string
-  category?: string
-  difficulty?: Difficulty
-}
-
-export interface WordGuessingItem {
-  id: string
-  type: 'word-guessing'
-  prompt: string
-  targetAnswer: string
-  acceptedAnswers?: string[]
-}
-
-export interface SocialPromptItem {
-  id: string
-  type: 'social'
-  prompt: string
-  responseType: 'vote-for-player'
-  instructions?: string
-  allowSelfVote?: boolean
-}
-
-export type ContentItem = TriviaItem | WordGuessingItem | SocialPromptItem
+export type {
+  ContentItem,
+  Difficulty,
+  SocialContentItem,
+  TriviaChoice,
+  TriviaContentItem,
+  WordGuessingContentItem,
+} from '../types/game'
 
 /** Length limits checked by content.test.ts. */
 export const CONTENT_LIMITS = {
   promptMax: 200,
   choiceLabelMax: 60,
-  answerMax: 60,
+  answerMax: GAME_LIMITS.wordAnswerMaxLength,
   instructionsMax: 160,
 } as const

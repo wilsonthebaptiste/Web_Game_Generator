@@ -1,7 +1,7 @@
 // Trivia bank. IDs are stable: never reuse or renumber one. Add new items at the end.
-import type { TriviaItem } from './types'
+import type { TriviaContentItem } from './types'
 
-export const triviaItems: TriviaItem[] = [
+export const triviaItems: TriviaContentItem[] = [
   {
     id: 'trv-001',
     type: 'trivia',

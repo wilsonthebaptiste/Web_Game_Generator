@@ -1,11 +1,11 @@
 // Social prompt bank. IDs are stable: never reuse or renumber one. Add new items at the end.
 // Keep prompts playful (spec §6): no private information, protected traits, bullying, or
 // dangerous acts. All MVP prompts are vote-for-player (plan.md §1.5).
-import type { SocialPromptItem } from './types'
+import type { SocialContentItem } from './types'
 
 const VOTE = 'Vote for one other player.'
 
-export const socialPromptItems: SocialPromptItem[] = [
+export const socialPromptItems: SocialContentItem[] = [
   {
     id: 'soc-001',
     type: 'social',

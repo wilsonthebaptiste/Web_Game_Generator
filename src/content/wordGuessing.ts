@@ -1,8 +1,8 @@
 // Word-guessing bank. IDs are stable: never reuse or renumber one. Add new items at the end.
 // Scoring is an exact match after trim + lowercase, so list common variants in acceptedAnswers.
-import type { WordGuessingItem } from './types'
+import type { WordGuessingContentItem } from './types'
 
-export const wordGuessingItems: WordGuessingItem[] = [
+export const wordGuessingItems: WordGuessingContentItem[] = [
   {
     id: 'wrd-001',
     type: 'word-guessing',
