@@ -2,7 +2,7 @@ import { GAME_LIMITS, type AppError, type AppErrorCode } from '../types/game'
 
 /** Player-facing text for every error code. Keep these short, friendly, and free of internals. */
 export const ERROR_MESSAGES: Record<AppErrorCode, string> = {
-  INVALID_DISPLAY_NAME: `Please enter a name between ${GAME_LIMITS.displayNameMinLength} and ${GAME_LIMITS.displayNameMaxLength} characters.`,
+  NAME_INVALID: `Please enter a name between ${GAME_LIMITS.displayNameMinLength} and ${GAME_LIMITS.displayNameMaxLength} characters.`,
   INVALID_ROOM_CODE: "That doesn't look like a room code. Check it and try again.",
   INVALID_MODE: "That game mode isn't available.",
   INVALID_ANSWER: "That answer isn't valid. Check it and try again.",
