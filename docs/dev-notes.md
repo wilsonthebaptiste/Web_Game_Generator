@@ -7,6 +7,12 @@ Newest entries go at the top of each section.
 
 ## Conventions to follow
 
+- **The plans are the source of truth for names.** When the contract and a contributor plan
+  disagree, the original plan wins. For example, the invalid-name error code is `NAME_INVALID`
+  (Wilson's plan), and room codes are 5 characters from `ABCDEFGHJKMNPQRSTUVWXYZ23456789`
+  (no `0 O 1 I L`), uppercased with spaces and dashes removed. The SQL copies the alphabet from
+  `src/lib/roomCodes.ts` exactly.
+
 - **Formatting:** Prettier with no semicolons, single quotes, and a print width of 100
   (`.prettierrc.json`). Run `npm run format` before committing. ESLint doesn't enforce formatting.
 - **Line endings:** `.gitattributes` keeps every file LF. On Windows you may see

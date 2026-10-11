@@ -269,7 +269,7 @@ export interface RoomMembership {
 
 export type AppErrorCode =
   // Input
-  | 'INVALID_DISPLAY_NAME'
+  | 'NAME_INVALID'
   | 'INVALID_ROOM_CODE'
   | 'INVALID_MODE'
   | 'INVALID_ANSWER'
