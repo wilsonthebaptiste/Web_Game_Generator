@@ -88,6 +88,13 @@ These files are likely to cause conflicts because many features depend on them. 
 | `README.md` | Contributor C | Contributors send setup/documentation updates to the owner or make isolated changes in separate PRs. |
 | `.env.example` | Contributor C | Commit placeholder variable names only, never real values. |
 | `vite.config.ts`, lint/test config | Contributor C | Coordinate config changes before editing. |
+| `src/lib/validation.ts` (display name, room code input) | Contributor A | Others import it; request changes from A. |
+| `src/features/game/rules/` (normalization, payload validation, scoring reference and fixtures) | Contributor B | C's RPCs mirror these rules; changes need a matching migration from C. |
+| `src/features/game/ModePicker.tsx` | Contributor B | Used by the lobby and results views. Import it; don't edit it. |
+| `src/app/RoomPage.tsx`, `src/app/useRoomSession.ts`, `src/app/theme.css` | Contributor C | Feature pages receive `RoomSession` as a prop and never open their own subscriptions. |
+| `src/lib/errors.ts`, `src/test/fixtures.ts`, `src/test/setup.ts` | Contributor C | Ask C for new error codes or fixtures. |
+| `scripts/` (content sync), `tests/integration/`, `docs/` | Contributor C | B's content reaches the database only through `npm run content:sync`. |
+| `.github/workflows/` | Contributor C | CI changes are coordinated like config changes. |
 
 If the team changes the role assignments, update this table first.
 
