@@ -25,28 +25,30 @@ Read [`../plan.md`](../plan.md) first. The phase numbers here match it. Your wor
 
 ---
 
-## Phase 1 — Foundation and Contracts
+## Phase 1 — Foundation and Contracts ✅
+
+**Status: ✅ Phase 1 work complete** (`feat/content-bank`, `feat/scoring-rules`). Remaining: C signs off on §1.5, the two PRs merge, and C is told the fixtures and content are ready. See [`contributor-b-project-findings.md`](contributor-b-project-findings.md).
 
 **Wait for:** C's `chore/scaffold` to merge before branching.
 
 **Before the scaffold merges (no branch needed):**
-- [ ] Review C's `feat/shared-contracts` PR, focusing on the content item types, `PromptSnapshot` per mode (with no answers in it), `AnswerPayload` per mode, `RevealSnapshot`/`RoundResult`, `RoundStatus`, and the signatures in `rounds.ts` and `answers.ts`.
+- [x] Review C's `feat/shared-contracts` PR, focusing on the content item types, `PromptSnapshot` per mode (with no answers in it), `AnswerPayload` per mode, `RevealSnapshot`/`RoundResult`, `RoundStatus`, and the signatures in `rounds.ts` and `answers.ts`.
 - [ ] Confirm the payload shapes and scoring rules in `plan.md` §1.5 with C.
 
 **Branch `feat/content-bank`:**
-- [ ] `src/content/trivia.ts`: ≥15 items `{ id, type: "trivia", prompt, choices: [{ id, label }], correctChoiceId, category?, difficulty? }`.
-- [ ] `src/content/wordGuessing.ts`: ≥15 items `{ id, type: "word-guessing", prompt, targetAnswer, acceptedAnswers? }`.
-- [ ] `src/content/socialPrompts.ts`: ≥15 items `{ id, type: "social", prompt, responseType: "vote-for-player", instructions?, allowSelfVote? }`.
-- [ ] Use stable, prefixed IDs (`trv-001`, `wrd-001`, `soc-001`) and never reuse or renumber one.
-- [ ] Safety review against spec §6: no private information, protected traits, bullying, or dangerous acts. Social prompts should be playful ("most likely to win a dance-off").
-- [ ] Content tests: unique IDs across all modes, `correctChoiceId` exists in `choices`, ≥10 items per mode, prompt and answer length limits, no blank strings.
+- [x] `src/content/trivia.ts`: ≥15 items `{ id, type: "trivia", prompt, choices: [{ id, label }], correctChoiceId, category?, difficulty? }`.
+- [x] `src/content/wordGuessing.ts`: ≥15 items `{ id, type: "word-guessing", prompt, targetAnswer, acceptedAnswers? }`.
+- [x] `src/content/socialPrompts.ts`: ≥15 items `{ id, type: "social", prompt, responseType: "vote-for-player", instructions?, allowSelfVote? }`.
+- [x] Use stable, prefixed IDs (`trv-001`, `wrd-001`, `soc-001`) and never reuse or renumber one.
+- [x] Safety review against spec §6: no private information, protected traits, bullying, or dangerous acts. Social prompts should be playful ("most likely to win a dance-off").
+- [x] Content tests: unique IDs across all modes, `correctChoiceId` exists in `choices`, ≥10 items per mode, prompt and answer length limits, no blank strings.
 
 **Branch `feat/scoring-rules`:**
-- [ ] `rules/normalize.ts`: `normalizeAnswer(text)` = trim + lowercase. Don't add fuzzy matching.
-- [ ] `rules/validatePayload.ts`: `validateAnswerPayload(mode, payload, context)`. Word guesses are 1–60 characters. Votes must name a player in the room, and not yourself unless the prompt allows it.
-- [ ] `rules/scoring.ts`: reference functions `scoreTrivia`, `scoreWordGuess`, `scoreSocialVotes`. These document the rules and drive the client-side checks. The **server** does the real scoring.
-- [ ] `rules/scoring.fixtures.json`: golden cases (input answers + answer key → expected points per player). Include whitespace, case, accepted variants, no-answer, self-vote, and ties.
-- [ ] Vitest tests that run every fixture through the reference functions.
+- [x] `rules/normalize.ts`: `normalizeAnswer(text)` = trim + lowercase. Don't add fuzzy matching.
+- [x] `rules/validatePayload.ts`: `validateAnswerPayload(mode, payload, context)`. Word guesses are 1–60 characters. Votes must name a player in the room, and not yourself unless the prompt allows it.
+- [x] `rules/scoring.ts`: reference functions `scoreTrivia`, `scoreWordGuess`, `scoreSocialVotes`. These document the rules and drive the client-side checks. The **server** does the real scoring.
+- [x] `rules/scoring.fixtures.json`: golden cases (input answers + answer key → expected points per player). Include whitespace, case, accepted variants, no-answer, self-vote, and ties.
+- [x] Vitest tests that run every fixture through the reference functions.
 
 **Done when:** both PRs are merged and you've told C that the fixtures are ready for the SQL parity test.
 
