@@ -25,7 +25,9 @@ Read [`../plan.md`](../plan.md) first. The phase numbers here match it. Your wor
 
 ---
 
-## Phase 1 — Foundation and Contracts
+## Phase 1 — Foundation and Contracts ✅
+
+**Status: ✅ Phase 1 work complete** (`feat/content-bank`, `feat/scoring-rules`). Still waiting on C: the contracts review, the §1.5 sign-off, and the PR merges. See [`contributor-b-project-findings.md`](contributor-b-project-findings.md).
 
 **Wait for:** C's `chore/scaffold` to merge before branching.
 
