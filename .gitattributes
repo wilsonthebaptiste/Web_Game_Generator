@@ -1,0 +1,2 @@
+# Keep LF everywhere so Prettier and diffs agree across Windows, macOS, and Linux.
+* text=auto eol=lf

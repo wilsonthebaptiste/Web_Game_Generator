@@ -1,0 +1,10 @@
+dist
+coverage
+package-lock.json
+supabase/.temp
+src/types/database.ts
+# Planning docs are hand-formatted.
+spec.md
+plan.md
+GIT_WORKFLOW.md
+plans
