@@ -29,13 +29,13 @@ Read [`../plan.md`](../plan.md) first. The phase numbers here match it. Your wor
 **Wait for:** C's `chore/scaffold` to merge before branching.
 
 **Before the scaffold merges (no branch needed):**
-- [ ] Review C's `feat/shared-contracts` PR, focusing on `Room`, `Player`, `RoomSession.me`, `CreateRoomInput`, `JoinRoomInput`, the signatures in `rooms.ts` and `players.ts`, and the error codes `ROOM_NOT_FOUND`, `ROOM_EXPIRED`, `ROOM_NOT_JOINABLE`, `NAME_INVALID`, `NAME_TAKEN`, and `RATE_LIMITED`.
-- [ ] Propose the room code format to C, for example 5 characters from `ABCDEFGHJKMNPQRSTUVWXYZ23456789` (no `0/O/1/I/L`), and the display-name rules, for example 1–20 characters after trimming with no control characters.
+- [x] Review C's `feat/shared-contracts` PR, focusing on `Room`, `Player`, `RoomSession.me`, `CreateRoomInput`, `JoinRoomInput`, the signatures in `rooms.ts` and `players.ts`, and the error codes `ROOM_NOT_FOUND`, `ROOM_EXPIRED`, `ROOM_NOT_JOINABLE`, `NAME_INVALID`, `NAME_TAKEN`, and `RATE_LIMITED`.
+- [x] Propose the room code format to C, for example 5 characters from `ABCDEFGHJKMNPQRSTUVWXYZ23456789` (no `0/O/1/I/L`), and the display-name rules, for example 1–20 characters after trimming with no control characters.
 
 **Branch `feat/room-code-utils`:**
-- [ ] `src/lib/roomCodes.ts`: `ROOM_CODE_ALPHABET`, `ROOM_CODE_LENGTH`, `normalizeRoomCode(input)` (uppercase, strip spaces and dashes), `isValidRoomCode(code)`.
-- [ ] `src/lib/validation.ts`: `validateDisplayName(name) → { ok: true, value } | { ok: false, code: "NAME_INVALID", reason }`.
-- [ ] Vitest tests for both, covering empty input, whitespace, lowercase input, ambiguous characters, max length, and emoji/unicode.
+- [x] `src/lib/roomCodes.ts`: `ROOM_CODE_ALPHABET`, `ROOM_CODE_LENGTH`, `normalizeRoomCode(input)` (uppercase, strip spaces and dashes), `isValidRoomCode(code)`.
+- [x] `src/lib/validation.ts`: `validateDisplayName(name) → { ok: true, value } | { ok: false, code: "NAME_INVALID", reason }`.
+- [x] Vitest tests for both, covering empty input, whitespace, lowercase input, ambiguous characters, max length, and emoji/unicode.
 
 **Done when:** tests pass, the PR is merged, and C has confirmed the same alphabet and length are used in SQL.
 
