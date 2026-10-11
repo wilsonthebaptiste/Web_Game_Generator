@@ -1,22 +1,25 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import type { Database } from '../types/database'
 import { createAppError } from './errors'
 
-// Typed with the generated `Database` type once `src/types/database.ts` exists (feat/initial-schema).
-let client: SupabaseClient | null = null
+// Typed from the live schema. Regenerate with `npm run db:types` after every migration.
+export type TypedSupabaseClient = SupabaseClient<Database>
+
+let client: TypedSupabaseClient | null = null
 let pendingSession: Promise<string> | null = null
 
 /**
  * Returns the shared Supabase client. Created lazily so that importing a service
  * module (e.g. in tests or a build without `.env`) never throws.
  */
-export function getSupabase(): SupabaseClient {
+export function getSupabase(): TypedSupabaseClient {
   if (!client) {
     const url = import.meta.env.VITE_SUPABASE_URL
     const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
     if (!url || !anonKey) {
       throw createAppError('CONFIG_MISSING')
     }
-    client = createClient(url, anonKey)
+    client = createClient<Database>(url, anonKey)
   }
   return client
 }
