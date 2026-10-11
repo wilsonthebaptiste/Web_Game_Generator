@@ -26,7 +26,7 @@ describe('validateDisplayName', () => {
   it.each(['', '   ', '\t\n', ' 　'])('rejects empty or whitespace-only %j', (input) => {
     expect(validateDisplayName(input)).toMatchObject({
       ok: false,
-      code: 'INVALID_DISPLAY_NAME',
+      code: 'NAME_INVALID',
       reason: 'empty',
     })
   })
@@ -39,7 +39,7 @@ describe('validateDisplayName', () => {
   it('rejects a name one over the max length', () => {
     expect(validateDisplayName('a'.repeat(DISPLAY_NAME_MAX_LENGTH + 1))).toMatchObject({
       ok: false,
-      code: 'INVALID_DISPLAY_NAME',
+      code: 'NAME_INVALID',
       reason: 'too_long',
     })
   })
@@ -83,7 +83,7 @@ describe('validateDisplayName', () => {
   ])('rejects an inner %s character', (_label, input) => {
     expect(validateDisplayName(input)).toMatchObject({
       ok: false,
-      code: 'INVALID_DISPLAY_NAME',
+      code: 'NAME_INVALID',
       reason: 'invalid_characters',
     })
   })
