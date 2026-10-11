@@ -1,0 +1,125 @@
+// Word-guessing bank. IDs are stable: never reuse or renumber one. Add new items at the end.
+// Scoring is an exact match after trim + lowercase, so list common variants in acceptedAnswers.
+import type { WordGuessingContentItem } from './types'
+
+export const wordGuessingItems: WordGuessingContentItem[] = [
+  {
+    id: 'wrd-001',
+    type: 'word-guessing',
+    prompt: 'A yellow fruit that monkeys are famous for loving.',
+    targetAnswer: 'banana',
+    acceptedAnswers: ['bananas'],
+  },
+  {
+    id: 'wrd-002',
+    type: 'word-guessing',
+    prompt: 'The frozen water that floats in your drink.',
+    targetAnswer: 'ice',
+    acceptedAnswers: ['ice cubes', 'ice cube'],
+  },
+  {
+    id: 'wrd-003',
+    type: 'word-guessing',
+    prompt: 'A device you use to open a locked door.',
+    targetAnswer: 'key',
+    acceptedAnswers: ['keys'],
+  },
+  {
+    id: 'wrd-004',
+    type: 'word-guessing',
+    prompt: 'The star at the center of our solar system.',
+    targetAnswer: 'sun',
+    acceptedAnswers: ['the sun'],
+  },
+  {
+    id: 'wrd-005',
+    type: 'word-guessing',
+    prompt: 'A striped black-and-white animal that looks like a horse.',
+    targetAnswer: 'zebra',
+  },
+  {
+    id: 'wrd-006',
+    type: 'word-guessing',
+    prompt: 'You blow these out on a birthday cake.',
+    targetAnswer: 'candles',
+    acceptedAnswers: ['candle'],
+  },
+  {
+    id: 'wrd-007',
+    type: 'word-guessing',
+    prompt: 'A colorful arc in the sky after rain.',
+    targetAnswer: 'rainbow',
+  },
+  {
+    id: 'wrd-008',
+    type: 'word-guessing',
+    prompt: 'A cold dessert served in a cone.',
+    targetAnswer: 'ice cream',
+    acceptedAnswers: ['icecream', 'gelato'],
+  },
+  {
+    id: 'wrd-009',
+    type: 'word-guessing',
+    prompt: 'The season when leaves fall from the trees.',
+    targetAnswer: 'autumn',
+    acceptedAnswers: ['fall'],
+  },
+  {
+    id: 'wrd-010',
+    type: 'word-guessing',
+    prompt: 'A pet that purrs and chases mice.',
+    targetAnswer: 'cat',
+    acceptedAnswers: ['kitten', 'kitty'],
+  },
+  {
+    id: 'wrd-011',
+    type: 'word-guessing',
+    prompt: 'You wear these on your feet inside your shoes.',
+    targetAnswer: 'socks',
+    acceptedAnswers: ['sock'],
+  },
+  {
+    id: 'wrd-012',
+    type: 'word-guessing',
+    prompt: 'A tall plant with a trunk, branches, and leaves.',
+    targetAnswer: 'tree',
+  },
+  {
+    id: 'wrd-013',
+    type: 'word-guessing',
+    prompt: 'The meal you usually eat in the morning.',
+    targetAnswer: 'breakfast',
+  },
+  {
+    id: 'wrd-014',
+    type: 'word-guessing',
+    prompt: 'A round, bouncy toy kicked in soccer.',
+    targetAnswer: 'ball',
+    acceptedAnswers: ['soccer ball', 'football'],
+  },
+  {
+    id: 'wrd-015',
+    type: 'word-guessing',
+    prompt: 'Something you open overhead when it rains.',
+    targetAnswer: 'umbrella',
+  },
+  {
+    id: 'wrd-016',
+    type: 'word-guessing',
+    prompt: 'A sweet, sticky food made by bees.',
+    targetAnswer: 'honey',
+  },
+  {
+    id: 'wrd-017',
+    type: 'word-guessing',
+    prompt: 'The large body of salt water that covers most of Earth.',
+    targetAnswer: 'ocean',
+    acceptedAnswers: ['sea', 'the ocean'],
+  },
+  {
+    id: 'wrd-018',
+    type: 'word-guessing',
+    prompt: 'A cold season when snow often falls.',
+    targetAnswer: 'winter',
+  },
+]
