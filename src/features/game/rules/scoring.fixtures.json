@@ -1,0 +1,198 @@
+{
+  "_comment": "Golden scoring cases (plan.md §1.5). Player IDs are symbolic; the SQL parity test maps each one to a real player row. 'answers' holds at most one row per player, matching the unique (round_id, player_id) constraint. Players with no row did not submit. A payload ID not listed in 'players' (e.g. 'stranger') stands for a player outside the room. 'expected' lists points for every player this round.",
+  "version": 1,
+  "cases": [
+    {
+      "name": "trivia: correct and incorrect choices",
+      "mode": "trivia",
+      "players": ["p1", "p2", "p3"],
+      "answerKey": { "correctChoiceId": "b" },
+      "answers": [
+        { "playerId": "p1", "payload": { "choiceId": "b" } },
+        { "playerId": "p2", "payload": { "choiceId": "a" } },
+        { "playerId": "p3", "payload": { "choiceId": "b" } }
+      ],
+      "expected": { "p1": 1, "p2": 0, "p3": 1 }
+    },
+    {
+      "name": "trivia: player with no answer scores 0",
+      "mode": "trivia",
+      "players": ["p1", "p2", "p3"],
+      "answerKey": { "correctChoiceId": "c" },
+      "answers": [{ "playerId": "p1", "payload": { "choiceId": "c" } }],
+      "expected": { "p1": 1, "p2": 0, "p3": 0 }
+    },
+    {
+      "name": "trivia: nobody answers",
+      "mode": "trivia",
+      "players": ["p1", "p2"],
+      "answerKey": { "correctChoiceId": "a" },
+      "answers": [],
+      "expected": { "p1": 0, "p2": 0 }
+    },
+    {
+      "name": "trivia: choice IDs are compared exactly (case-sensitive)",
+      "mode": "trivia",
+      "players": ["p1", "p2"],
+      "answerKey": { "correctChoiceId": "b" },
+      "answers": [
+        { "playerId": "p1", "payload": { "choiceId": "B" } },
+        { "playerId": "p2", "payload": { "choiceId": " b" } }
+      ],
+      "expected": { "p1": 0, "p2": 0 }
+    },
+    {
+      "name": "trivia: everyone correct (tie)",
+      "mode": "trivia",
+      "players": ["p1", "p2"],
+      "answerKey": { "correctChoiceId": "d" },
+      "answers": [
+        { "playerId": "p1", "payload": { "choiceId": "d" } },
+        { "playerId": "p2", "payload": { "choiceId": "d" } }
+      ],
+      "expected": { "p1": 1, "p2": 1 }
+    },
+    {
+      "name": "word-guessing: exact match",
+      "mode": "word-guessing",
+      "players": ["p1", "p2"],
+      "answerKey": { "targetAnswer": "banana", "acceptedAnswers": ["bananas"] },
+      "answers": [
+        { "playerId": "p1", "payload": { "text": "banana" } },
+        { "playerId": "p2", "payload": { "text": "apple" } }
+      ],
+      "expected": { "p1": 1, "p2": 0 }
+    },
+    {
+      "name": "word-guessing: leading/trailing whitespace is ignored",
+      "mode": "word-guessing",
+      "players": ["p1", "p2"],
+      "answerKey": { "targetAnswer": "zebra" },
+      "answers": [
+        { "playerId": "p1", "payload": { "text": "  zebra  " } },
+        { "playerId": "p2", "payload": { "text": "\tzebra\n" } }
+      ],
+      "expected": { "p1": 1, "p2": 1 }
+    },
+    {
+      "name": "word-guessing: case is ignored",
+      "mode": "word-guessing",
+      "players": ["p1", "p2"],
+      "answerKey": { "targetAnswer": "rainbow" },
+      "answers": [
+        { "playerId": "p1", "payload": { "text": "RAINBOW" } },
+        { "playerId": "p2", "payload": { "text": "RainBow" } }
+      ],
+      "expected": { "p1": 1, "p2": 1 }
+    },
+    {
+      "name": "word-guessing: accepted variants score",
+      "mode": "word-guessing",
+      "players": ["p1", "p2", "p3"],
+      "answerKey": { "targetAnswer": "autumn", "acceptedAnswers": ["fall"] },
+      "answers": [
+        { "playerId": "p1", "payload": { "text": "Fall" } },
+        { "playerId": "p2", "payload": { "text": "autumn" } },
+        { "playerId": "p3", "payload": { "text": "spring" } }
+      ],
+      "expected": { "p1": 1, "p2": 1, "p3": 0 }
+    },
+    {
+      "name": "word-guessing: inner whitespace and near misses do not match (no fuzzy matching)",
+      "mode": "word-guessing",
+      "players": ["p1", "p2", "p3"],
+      "answerKey": { "targetAnswer": "ice cream", "acceptedAnswers": ["icecream"] },
+      "answers": [
+        { "playerId": "p1", "payload": { "text": "ice  cream" } },
+        { "playerId": "p2", "payload": { "text": "ice creams" } },
+        { "playerId": "p3", "payload": { "text": "Ice Cream" } }
+      ],
+      "expected": { "p1": 0, "p2": 0, "p3": 1 }
+    },
+    {
+      "name": "word-guessing: player with no answer scores 0",
+      "mode": "word-guessing",
+      "players": ["p1", "p2"],
+      "answerKey": { "targetAnswer": "honey" },
+      "answers": [{ "playerId": "p2", "payload": { "text": "honey" } }],
+      "expected": { "p1": 0, "p2": 1 }
+    },
+    {
+      "name": "social: each vote gives the voted player one point",
+      "mode": "social",
+      "players": ["p1", "p2", "p3"],
+      "answerKey": { "allowSelfVote": false },
+      "answers": [
+        { "playerId": "p1", "payload": { "votedPlayerId": "p2" } },
+        { "playerId": "p2", "payload": { "votedPlayerId": "p3" } },
+        { "playerId": "p3", "payload": { "votedPlayerId": "p2" } }
+      ],
+      "expected": { "p1": 0, "p2": 2, "p3": 1 }
+    },
+    {
+      "name": "social: tie between two players",
+      "mode": "social",
+      "players": ["p1", "p2", "p3", "p4"],
+      "answerKey": { "allowSelfVote": false },
+      "answers": [
+        { "playerId": "p1", "payload": { "votedPlayerId": "p2" } },
+        { "playerId": "p2", "payload": { "votedPlayerId": "p1" } },
+        { "playerId": "p3", "payload": { "votedPlayerId": "p1" } },
+        { "playerId": "p4", "payload": { "votedPlayerId": "p2" } }
+      ],
+      "expected": { "p1": 2, "p2": 2, "p3": 0, "p4": 0 }
+    },
+    {
+      "name": "social: self-vote is ignored when the prompt does not allow it",
+      "mode": "social",
+      "players": ["p1", "p2"],
+      "answerKey": { "allowSelfVote": false },
+      "answers": [
+        { "playerId": "p1", "payload": { "votedPlayerId": "p1" } },
+        { "playerId": "p2", "payload": { "votedPlayerId": "p1" } }
+      ],
+      "expected": { "p1": 1, "p2": 0 }
+    },
+    {
+      "name": "social: self-vote counts when the prompt allows it",
+      "mode": "social",
+      "players": ["p1", "p2"],
+      "answerKey": { "allowSelfVote": true },
+      "answers": [
+        { "playerId": "p1", "payload": { "votedPlayerId": "p1" } },
+        { "playerId": "p2", "payload": { "votedPlayerId": "p1" } }
+      ],
+      "expected": { "p1": 2, "p2": 0 }
+    },
+    {
+      "name": "social: missing allowSelfVote means self-votes are not allowed",
+      "mode": "social",
+      "players": ["p1", "p2"],
+      "answerKey": {},
+      "answers": [
+        { "playerId": "p1", "payload": { "votedPlayerId": "p1" } },
+        { "playerId": "p2", "payload": { "votedPlayerId": "p2" } }
+      ],
+      "expected": { "p1": 0, "p2": 0 }
+    },
+    {
+      "name": "social: players with no vote still receive votes",
+      "mode": "social",
+      "players": ["p1", "p2", "p3"],
+      "answerKey": { "allowSelfVote": false },
+      "answers": [{ "playerId": "p1", "payload": { "votedPlayerId": "p3" } }],
+      "expected": { "p1": 0, "p2": 0, "p3": 1 }
+    },
+    {
+      "name": "social: vote for a player outside the room is ignored",
+      "mode": "social",
+      "players": ["p1", "p2"],
+      "answerKey": { "allowSelfVote": false },
+      "answers": [
+        { "playerId": "p1", "payload": { "votedPlayerId": "stranger" } },
+        { "playerId": "p2", "payload": { "votedPlayerId": "p1" } }
+      ],
+      "expected": { "p1": 1, "p2": 0 }
+    }
+  ]
+}
