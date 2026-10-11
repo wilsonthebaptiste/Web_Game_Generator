@@ -1,7 +1,7 @@
-import type { AnswerPayload, GameMode } from '../../../types/game'
+import { GAME_LIMITS, type AnswerPayload, type GameMode } from '../../../types/game'
 
 export const WORD_GUESS_MIN_LENGTH = 1
-export const WORD_GUESS_MAX_LENGTH = 60
+export const WORD_GUESS_MAX_LENGTH = GAME_LIMITS.wordAnswerMaxLength
 
 export interface ValidationContext {
   /** The caller's player ID. Used to reject self-votes. */
@@ -14,12 +14,17 @@ export interface ValidationContext {
   allowSelfVote?: boolean
 }
 
-export type ValidationResult =
-  { ok: true; value: AnswerPayload } | { ok: false; code: 'INVALID_ANSWER'; reason: string }
+export type ValidationErrorCode = 'INVALID_ANSWER' | 'SELF_VOTE_NOT_ALLOWED'
 
-const invalid = (reason: string): ValidationResult => ({
+export type ValidationResult =
+  { ok: true; value: AnswerPayload } | { ok: false; code: ValidationErrorCode; reason: string }
+
+const invalid = (
+  reason: string,
+  code: ValidationErrorCode = 'INVALID_ANSWER',
+): ValidationResult => ({
   ok: false,
-  code: 'INVALID_ANSWER',
+  code,
   reason,
 })
 
@@ -71,7 +76,7 @@ export function validateAnswerPayload(
         return invalid('That player is not in this room.')
       }
       if (votedPlayerId === context.myPlayerId && !context.allowSelfVote) {
-        return invalid('You can’t vote for yourself on this prompt.')
+        return invalid('You can’t vote for yourself on this prompt.', 'SELF_VOTE_NOT_ALLOWED')
       }
       return { ok: true, value: { votedPlayerId } }
     }

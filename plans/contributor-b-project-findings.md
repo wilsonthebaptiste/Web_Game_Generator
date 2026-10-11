@@ -38,7 +38,8 @@ General rules:
 - It strips extra fields and **trims word guesses** before they're sent.
 - A word guess must be 1–60 characters **after trimming**.
 - Trivia choices are checked against `context.choiceIds` when they're provided.
-- Votes must name a room member, and can't be for yourself unless `allowSelfVote` is set.
+- Votes must name a room member. A self-vote returns `SELF_VOTE_NOT_ALLOWED` unless `allowSelfVote` is set; every other failure returns `INVALID_ANSWER`.
+- The 60-character limit comes from `GAME_LIMITS.wordAnswerMaxLength` in `src/types/game.ts`.
 
 ## 4. Notes for C (SQL parity and content sync)
 
@@ -50,34 +51,33 @@ General rules:
    - Each case has at most one answer row per player, which matches the unique `(round_id, player_id)` constraint.
 4. The self-vote fixtures put self-votes straight into `answers`, skipping `submit_answer`, which would reject them. That tests that `reveal_round` ignores them anyway (defense in depth). If the parity test inserts answers through `submit_answer`, insert those rows directly instead.
 5. `answerKey` shapes: trivia `{ correctChoiceId }`, word `{ targetAnswer, acceptedAnswers? }`, social `{ allowSelfVote? }`.
-6. **Content sync split** (proposal):
+6. **Content sync split.** This matches the merged `PromptSnapshot` types; add `mode` when copying into `rounds.prompt_snapshot`.
    - Trivia: `public_payload = { prompt, choices, category?, difficulty? }`, `answer_key = { correctChoiceId }`.
-   - Word: `public_payload = { prompt }`, `answer_key = { targetAnswer, acceptedAnswers }`.
-   - Social: `allowSelfVote` is **not** secret. It belongs in `public_payload = { prompt, responseType, instructions?, allowSelfVote }` so the UI can offer a self-vote and validate it. `submit_answer` and `reveal_round` also need to read it on the server.
+   - Word: `public_payload = { prompt, category? }`, `answer_key = { targetAnswer, acceptedAnswers }`.
+   - Social: `allowSelfVote` is **not** secret. It belongs in `public_payload = { prompt, responseType, instructions?, allowSelfVote }` (default `false`, since `SocialPromptSnapshot.allowSelfVote` is required) so the UI can offer a self-vote and validate it. `submit_answer` and `reveal_round` also need to read it on the server.
 
-## 5. Interface concerns for the `feat/shared-contracts` review
+## 5. Contract check against the merged `feat/shared-contracts`
 
-- **Content item types.** For now they live in `src/content/types.ts`, because `src/types/game.ts` doesn't have them yet. When the contracts PR adds them, B will switch `src/content/types.ts` to re-export from `game.ts`, using matching field names: `TriviaItem`, `WordGuessingItem`, `SocialPromptItem`, `TriviaChoice`.
-- **`PromptSnapshot` per mode** must include:
-  - trivia: `choices` (id + label)
-  - social: `allowSelfVote` and `instructions`
+`feat/shared-contracts` (PR #2) merged while this work was in progress, so both branches were rebased onto it.
 
-  It must **not** include `correctChoiceId`, `targetAnswer` or `acceptedAnswers`.
-- **`AnswerPayload`** is an untagged union, so it only makes sense together with `round.mode`. That's fine because `validateAnswerPayload` takes the mode, but keep it in mind for type narrowing.
-- **`services/answers.ts`** is missing `getMyAnswer(roundId)`, which Phase 3 of B's plan asks for. Either add it to the contract, or confirm that `RoomSession.myAnswer` from `get_room_snapshot` replaces it.
-- `startRound` returns `Round` and `revealRound` returns `void`. That works for B, because the UI refreshes from the snapshot after realtime events.
-- `AppErrorCode` must include `INVALID_ANSWER`, `ROUND_NOT_ANSWERING`, `ROUND_ALREADY_REVEALED`, `ROUND_LIMIT_REACHED`, `NO_CONTENT_AVAILABLE` and `NOT_HOST`.
+- **Content item types:** resolved. `src/content/types.ts` now re-exports `TriviaContentItem`, `WordGuessingContentItem`, `SocialContentItem`, `TriviaChoice`, `Difficulty` and `ContentItem` from `src/types/game.ts`.
+- **`PromptSnapshot`:** resolved. Trivia has `choices`, social has `allowSelfVote` and `instructions`, and none of the snapshots carry answers.
+- **Error codes:** resolved. `INVALID_ANSWER`, `SELF_VOTE_NOT_ALLOWED`, `ROUND_NOT_ANSWERING`, `ROUND_ALREADY_REVEALED`, `ROUND_LIMIT_REACHED`, `NO_CONTENT_AVAILABLE` and `NOT_HOST` all exist. `validateAnswerPayload` now uses `SELF_VOTE_NOT_ALLOWED`.
+- **Still open: `getMyAnswer(roundId)`.** Phase 3 of B's plan asks for it, but `src/services/answers.ts` only has `submitAnswer`. Proposal: drop it from B's plan and use `RoomSession.myAnswer` plus `session.refresh()` after a submit, rather than adding a new RPC.
+- `RoundResult.isCorrect` has to be set by `reveal_round`: `pointsAwarded > 0` for trivia and word guessing, and `null` for social. The reference scorers return points only, so the fixtures don't cover `isCorrect`.
+- `AnswerPayload` is an untagged union, so it only makes sense together with `round.mode`. That's fine because `validateAnswerPayload` takes the mode.
 
 ## 6. Environment findings
 
 - The project needs **Node 24** (`.nvmrc`, `engines`). Under Node 21, Vitest 5 crashes on startup with `ERR_INVALID_ARG_VALUE` from `util.styleText`. Fix it by installing Node 24 LTS (`winget install OpenJS.NodeJS.LTS`).
 - Under Node 21's older npm, `npm ci` on Windows didn't install `@rolldown/binding-win32-x64-msvc`, which caused the "Cannot find native binding" error. With Node 24's npm, a clean `rm -rf node_modules && npm ci` works and no workaround is needed.
 - `npm ci` warns that some packages' install scripts aren't approved yet. Tests and the build work without them.
+- **`main` is currently red (not caused by B).** PR #3 renamed `INVALID_DISPLAY_NAME` to `NAME_INVALID` in `src/types/game.ts`, but `src/lib/validation.ts` (A) still returns `'INVALID_DISPLAY_NAME'`. Result: `npm run typecheck` fails at `src/lib/validation.ts:45` and one test in `src/lib/validation.test.ts` fails. Every open PR, B's included, will show red CI until A fixes that line. B's own files pass lint, typecheck and tests.
 
 ## 7. Phase 1 status
 
 - [x] `feat/content-bank` work done and committed
 - [x] `feat/scoring-rules` work done and committed
-- [ ] Review C's `feat/shared-contracts` PR (not opened yet; use §5 above)
+- [x] Check B's work against the merged `feat/shared-contracts` contract (§5). One item is still open: `getMyAnswer`.
 - [ ] Confirm the §1.5 payloads and scoring rules with C (use §3–4 above)
 - [ ] Both PRs merged, and C told that the fixtures are ready for the SQL parity test and the content is ready for `content:sync`

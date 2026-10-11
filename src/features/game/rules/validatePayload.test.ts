@@ -82,7 +82,10 @@ describe('validateAnswerPayload', () => {
     })
 
     it('rejects a self-vote unless the prompt allows it', () => {
-      expect(validateAnswerPayload('social', { votedPlayerId: 'me' }, ctx).ok).toBe(false)
+      expect(validateAnswerPayload('social', { votedPlayerId: 'me' }, ctx)).toMatchObject({
+        ok: false,
+        code: 'SELF_VOTE_NOT_ALLOWED',
+      })
       expect(
         validateAnswerPayload('social', { votedPlayerId: 'me' }, { ...ctx, allowSelfVote: true })
           .ok,
