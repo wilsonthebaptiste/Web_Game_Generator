@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { createAppError } from './errors'
 
 // Typed with the generated `Database` type once `src/types/database.ts` exists (feat/initial-schema).
 let client: SupabaseClient | null = null
@@ -13,9 +14,7 @@ export function getSupabase(): SupabaseClient {
     const url = import.meta.env.VITE_SUPABASE_URL
     const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
     if (!url || !anonKey) {
-      throw new Error(
-        'Supabase is not configured. Copy .env.example to .env and fill in the dev project values.',
-      )
+      throw createAppError('CONFIG_MISSING')
     }
     client = createClient(url, anonKey)
   }

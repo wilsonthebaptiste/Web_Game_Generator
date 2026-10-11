@@ -29,22 +29,23 @@ Your work is on the critical path, especially in Phases 1–2. Merge contract an
 Your PRs here unblock everyone. Aim to merge `chore/scaffold` on day one.
 
 **Branch `chore/scaffold`:**
-- [ ] `npm create vite@latest` (React + TS). Pin Node in `.nvmrc` and `package.json#engines`.
-- [ ] Install every expected MVP dependency now so no one needs to change `package.json` later: `react-router-dom`, `@supabase/supabase-js`, and as dev dependencies `vitest`, `jsdom`, `@testing-library/react`, `@testing-library/user-event`, `@testing-library/jest-dom`, `eslint` (+ react/ts plugins), `prettier`, `tsx`, `supabase` (CLI).
-- [ ] Scripts: `dev`, `build`, `preview`, `lint`, `typecheck`, `test`, `test:db`, `format`, `content:sync`, `db:types`.
-- [ ] ESLint `no-restricted-imports`: block `src/content/**` from everything under `src/` except `src/content/` itself. (`scripts/` is outside `src/` and may import it.)
-- [ ] `.gitignore` (`.env`, `.env.*` except `.env.example`, `dist`, `supabase/.temp`). `.env.example` with `VITE_SUPABASE_URL=` and `VITE_SUPABASE_ANON_KEY=` (placeholders only).
-- [ ] `src/lib/supabaseClient.ts` with an `ensureAnonymousSession()` helper.
-- [ ] `src/app/App.tsx` + `routes.tsx`: `/`, `/join/:code`, `/room/:code`. `theme.css` with colour, spacing, and focus tokens.
-- [ ] `src/components/`: `Button`, `Input` (always labelled), `LoadingState`, `ErrorMessage`.
-- [ ] **Stub handoff files** (ownership passes to A or B on merge): `features/home/HomePage.tsx`, `features/lobby/LobbyPage.tsx`, `features/game/GamePage.tsx`, and `services/{rooms,players,rounds,answers}.ts` with agreed signatures that `throw new Error("not implemented")`.
-- [ ] `.github/workflows/ci.yml`: install, lint, typecheck, test, build on every PR. Turn on branch protection for `main` (PRs required, one approval, CI required, no force-push).
+- [x] `npm create vite@latest` (React + TS). Pin Node in `.nvmrc` and `package.json#engines`.
+- [x] Install every expected MVP dependency now so no one needs to change `package.json` later: `react-router-dom`, `@supabase/supabase-js`, and as dev dependencies `vitest`, `jsdom`, `@testing-library/react`, `@testing-library/user-event`, `@testing-library/jest-dom`, `eslint` (+ react/ts plugins), `prettier`, `tsx`, `supabase` (CLI).
+- [x] Scripts: `dev`, `build`, `preview`, `lint`, `typecheck`, `test`, `test:db`, `format`, `content:sync`, `db:types`.
+- [x] ESLint `no-restricted-imports`: block `src/content/**` from everything under `src/` except `src/content/` itself. (`scripts/` is outside `src/` and may import it.)
+- [x] `.gitignore` (`.env`, `.env.*` except `.env.example`, `dist`, `supabase/.temp`). `.env.example` with `VITE_SUPABASE_URL=` and `VITE_SUPABASE_ANON_KEY=` (placeholders only).
+- [x] `src/lib/supabaseClient.ts` with an `ensureAnonymousSession()` helper.
+- [x] `src/app/App.tsx` + `routes.tsx`: `/`, `/join/:code`, `/room/:code`. `theme.css` with colour, spacing, and focus tokens.
+- [x] `src/components/`: `Button`, `Input` (always labelled), `LoadingState`, `ErrorMessage`.
+- [x] **Stub handoff files** (ownership passes to A or B on merge): `features/home/HomePage.tsx`, `features/lobby/LobbyPage.tsx`, `features/game/GamePage.tsx`, and `services/{rooms,players,rounds,answers}.ts` with agreed signatures that `throw new Error("not implemented")`.
+- [x] `.github/workflows/ci.yml`: install, lint, typecheck, test, build on every PR.
+- [ ] Turn on branch protection for `main` (PRs required, one approval, CI required, no force-push). Wilson owns the repo, so he has to do this.
 
 **Branch `feat/shared-contracts`** (request review from **both** A and B):
-- [ ] `src/types/game.ts`: `GameMode`, `RoomStatus`, `RoundStatus`, `Room`, `Player`, `Round`, content item types per mode, `PromptSnapshot` per mode (no answer fields), `AnswerPayload` per mode, `RevealSnapshot`, `RoundResult`, `RoomSession { room, players, currentRound, me, myAnswer, connection }`, `CreateRoomInput`, `JoinRoomInput`, `AppErrorCode`, `AppError`.
-- [ ] `src/lib/errors.ts`: map each `AppErrorCode` to a friendly message, plus `toAppError(unknown)`.
-- [ ] `src/test/fixtures.ts`: `RoomSession` fixtures for lobby (host / non-host), answering (each mode, submitted / not), revealed (each mode), and finished (with a tie).
-- [ ] Add the ownership rows from `plan.md` §1.7 to the table in `GIT_WORKFLOW.md` §4.
+- [x] `src/types/game.ts`: `GameMode`, `RoomStatus`, `RoundStatus`, `Room`, `Player`, `Round`, content item types per mode, `PromptSnapshot` per mode (no answer fields), `AnswerPayload` per mode, `RevealSnapshot`, `RoundResult`, `RoomSession { room, players, currentRound, me, myAnswer, connection }`, `CreateRoomInput`, `JoinRoomInput`, `AppErrorCode`, `AppError`.
+- [x] `src/lib/errors.ts`: map each `AppErrorCode` to a friendly message, plus `toAppError(unknown)`.
+- [x] `src/test/fixtures.ts`: `RoomSession` fixtures for lobby (host / non-host), answering (each mode, submitted / not), revealed (each mode), and finished (with a tie).
+- [x] Add the ownership rows from `plan.md` §1.7 to the table in `GIT_WORKFLOW.md` §4.
 
 **Branch `feat/initial-schema`:**
 - [ ] Create Supabase projects `dev` and `prod`. Enable anonymous sign-ins on both. Store credentials only in your local `.env` and a password manager.
