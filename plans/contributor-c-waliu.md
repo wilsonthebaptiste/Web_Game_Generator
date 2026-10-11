@@ -48,11 +48,11 @@ Your PRs here unblock everyone. Aim to merge `chore/scaffold` on day one.
 - [x] Add the ownership rows from `plan.md` §1.7 to the table in `GIT_WORKFLOW.md` §4.
 
 **Branch `feat/initial-schema`:**
-- [ ] Create Supabase projects `dev` and `prod`. Enable anonymous sign-ins on both. Store credentials only in your local `.env` and a password manager.
-- [ ] `supabase/migrations/<ts>_initial_schema.sql`: the tables in `plan.md` §1.4, check constraints on status and mode, foreign keys, indexes (`rooms.code`, `players.room_id`, `rounds.room_id`, `answers.round_id`), and the unique constraints.
-- [ ] RLS enabled on **every** table. SELECT-only policies for room members on `rooms`, `players`, and `rounds`. Own rows only on `answers`. No policies on `round_secrets` or `content_items`. No client write policies anywhere.
-- [ ] Realtime publication for `rooms`, `players`, `rounds`.
-- [ ] Apply to `dev`. Run `npm run db:types` to generate `src/types/database.ts`.
+- [x] Create Supabase projects `dev` and `prod`. Enable anonymous sign-ins on both. Store credentials only in your local `.env` and a password manager.
+- [x] `supabase/migrations/<ts>_initial_schema.sql`: the tables in `plan.md` §1.4, check constraints on status and mode, foreign keys, indexes (`rooms.code`, `players.room_id`, `rounds.room_id`, `answers.round_id`), and the unique constraints.
+- [x] RLS enabled on **every** table. SELECT-only policies for room members on `rooms`, `players`, and `rounds`. Own rows only on `answers`. No policies on `round_secrets` or `content_items`. No client write policies anywhere.
+- [x] Realtime publication for `rooms`, `players`, `rounds`.
+- [x] Apply to `dev`. Run `npm run db:types` to generate `src/types/database.ts`.
 
 **Done when:** the Phase 1 exit gate in `plan.md` passes.
 

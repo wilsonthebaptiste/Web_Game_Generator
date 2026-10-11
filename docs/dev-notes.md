@@ -51,6 +51,40 @@ Newest entries go at the top of each section.
 
 ## Supabase
 
+- **Projects:** `party-game-dev` (ref `nlpqfmsijyeyhfvssain`) and `party-game-prod`
+  (ref `defxqdxgrwnwfhjtsaya`), both in us-west-2. Refs aren't secret. The Project URL is always
+  `https://<ref>.supabase.co`. Ask Contributor C for the `dev` publishable key for your `.env`.
+- **Copy the whole publishable key,** including the `sb_publishable_` prefix. Without the prefix
+  Supabase answers "Invalid API key". Never use a `sb_secret_` or `service_role` key in the app.
+- **New projects have anonymous sign-ins turned off.** Turn them on under Authentication →
+  Sign In / Providers, or nobody can create or join a room.
+- **Anonymous users have the `authenticated` role, not `anon`.** RLS policies and grants target
+  `authenticated`. The `anon` role (no session at all) gets nothing.
+- **Clients can only read.** The initial migration revokes every table privilege from `anon`
+  and `authenticated`, then grants SELECT on `rooms`, `players`, `rounds`, and `answers` only.
+  It also changes default privileges, so **a table added by a later migration has no client
+  access until that migration grants it.**
+- **New functions are callable by everyone by default.** Supabase grants EXECUTE on new
+  functions to `anon` and `authenticated`. Every RPC migration must
+  `revoke execute on function ... from public, anon` and grant only to `authenticated`.
+- **Helpers live in the `private` schema.** It isn't exposed through the Data API, so functions
+  like `private.is_room_member()` can be used in RLS policies but can't be called as RPCs.
+- **Display names are checked by the database too.** The `players` table rejects names that
+  aren't 1–20 code points, trimmed, NFC-normalized, and free of control characters. This matches
+  `validateDisplayName`, so always send its `value` (trimmed and normalized), not the raw input.
+- **Room codes are checked by the database too:** 5 characters from `ROOM_CODE_ALPHABET`.
+  If `src/lib/roomCodes.ts` ever changes, the SQL needs a new migration in the same release.
+- **`src/types/database.ts` is generated.** Never edit it by hand. Contributor C runs
+  `npm run db:types` after each migration. `getSupabase()` is typed with it, so table and column
+  names are checked by TypeScript.
+- **No GitHub integration needed.** Supabase's "connect GitHub repo" option is for Branching
+  (paid) and needs repo admin. We apply migrations with the CLI instead: `npx supabase login`
+  once, `npx supabase link --project-ref <ref>`, then `npx supabase db push`. Linking and pushing
+  only need the Supabase login, not the database password.
+- **Docker isn't installed on Contributor C's machine yet,** so `npm run test:db` can't run
+  locally. The initial migration was verified with PGlite (Postgres in Node) plus live checks on
+  `dev` as an anonymous user. Docker Desktop is needed before the RPC parity tests in Phase 3.
+
 - **The client is created lazily.** `getSupabase()` builds the client on first use and throws a
   `CONFIG_MISSING` AppError if `.env` is missing. That's why pages and tests work without `.env`.
 - **Anonymous sign-in runs once.** React StrictMode runs effects twice in development, which
@@ -73,6 +107,10 @@ Newest entries go at the top of each section.
   files: imports from a feature folder fail, while `src/content/` itself and `scripts/` pass.
 
 ## GitHub and workflow
+
+- **Check that a PR is still open before pushing a fix to its branch.** Commits pushed to a
+  branch after its PR merged go nowhere. Put the fix on a new branch from `main` instead (this
+  happened with the `NAME_INVALID` rename, which became PR #3).
 
 - **Branch protection on a private repo needs a paid GitHub plan.** The repo was made public
   so protection is free. That makes the "no secrets in Git" rule even more important.
