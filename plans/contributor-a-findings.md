@@ -41,7 +41,7 @@ all pass on top of `main` at `8463e26`, which includes `feat/shared-contracts`.
 **Return shape**
 - Success returns `{ ok: true, value }`, where `value` is the cleaned string to send to the RPC.
 - Failure returns `{ ok: false, code, reason, message }`:
-  - `code` is a contract `AppErrorCode`: `INVALID_DISPLAY_NAME` or `INVALID_ROOM_CODE`.
+  - `code` is a contract `AppErrorCode`: `NAME_INVALID` or `INVALID_ROOM_CODE`.
   - `reason` is a short machine-readable tag such as `empty`, `too_long`, `wrong_length` or
     `invalid_characters`.
   - `message` is friendly text that the home page can show as is.
@@ -74,15 +74,16 @@ PR #2 was merged before A's review, so the open items below need a follow-up fro
    fixes:
    - a documented convention, where services attach the status before converting;
    - a helper in `errors.ts`.
-4. **Minor:** the `INVALID_DISPLAY_NAME` message mentions only length. If the server rejects a
+4. **Minor:** the `NAME_INVALID` message mentions only length. If the server rejects a
    name for a control character, the message is misleading. A's client check catches this first,
    so it's low priority.
 
 ### Changes made to match the contract
 
-- The plan used the error code `NAME_INVALID`, but the contract uses `INVALID_DISPLAY_NAME`.
-  `validation.ts` follows the contract. `plan.md` and `contributor-a-wilson.md` still say
-  `NAME_INVALID` and should be read as `INVALID_DISPLAY_NAME`.
+- The invalid-name code is `NAME_INVALID`, as in the plan. `feat/shared-contracts` first
+  shipped it as `INVALID_DISPLAY_NAME`, and PR #4 followed that. C then renamed it back in PR #3
+  ("when the plan and the code disagree, the original plan wins"). The two PRs crossed and
+  broke `main`'s typecheck, which `fix/name-invalid-code` repairs.
 - `validateRoomCodeInput` returns the contract's `INVALID_ROOM_CODE`.
 - The name length limit now comes from `GAME_LIMITS` instead of a separate constant.
 

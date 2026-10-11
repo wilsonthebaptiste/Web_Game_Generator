@@ -15,7 +15,7 @@ export type DisplayNameResult =
   | { ok: true; value: string }
   | {
       ok: false
-      code: Extract<AppErrorCode, 'INVALID_DISPLAY_NAME'>
+      code: Extract<AppErrorCode, 'NAME_INVALID'>
       reason: DisplayNameIssue
       message: string
     }
@@ -42,7 +42,7 @@ export function validateDisplayName(name: string): DisplayNameResult {
 }
 
 function nameError(reason: DisplayNameIssue, message: string): DisplayNameResult {
-  return { ok: false, code: 'INVALID_DISPLAY_NAME', reason, message }
+  return { ok: false, code: 'NAME_INVALID', reason, message }
 }
 
 export type RoomCodeIssue = 'empty' | 'wrong_length' | 'invalid_characters'
