@@ -27,12 +27,12 @@ Read [`../plan.md`](../plan.md) first. The phase numbers here match it. Your wor
 
 ## Phase 1 — Foundation and Contracts ✅
 
-**Status: ✅ Phase 1 work complete** (`feat/content-bank`, `feat/scoring-rules`). Still waiting on C: the contracts review, the §1.5 sign-off, and the PR merges. See [`contributor-b-project-findings.md`](contributor-b-project-findings.md).
+**Status: ✅ Phase 1 work complete** (`feat/content-bank`, `feat/scoring-rules`). Remaining: C signs off on §1.5, the two PRs merge, and C is told the fixtures and content are ready. See [`contributor-b-project-findings.md`](contributor-b-project-findings.md).
 
 **Wait for:** C's `chore/scaffold` to merge before branching.
 
 **Before the scaffold merges (no branch needed):**
-- [ ] Review C's `feat/shared-contracts` PR, focusing on the content item types, `PromptSnapshot` per mode (with no answers in it), `AnswerPayload` per mode, `RevealSnapshot`/`RoundResult`, `RoundStatus`, and the signatures in `rounds.ts` and `answers.ts`.
+- [x] Review C's `feat/shared-contracts` PR, focusing on the content item types, `PromptSnapshot` per mode (with no answers in it), `AnswerPayload` per mode, `RevealSnapshot`/`RoundResult`, `RoundStatus`, and the signatures in `rounds.ts` and `answers.ts`.
 - [ ] Confirm the payload shapes and scoring rules in `plan.md` §1.5 with C.
 
 **Branch `feat/content-bank`:**
