@@ -5,6 +5,7 @@ import { defineConfig } from 'vitest/config'
 export default defineConfig({
   test: {
     environment: 'node',
+    globals: true,
     include: ['tests/integration/**/*.test.ts'],
     passWithNoTests: true,
     // Tests share one database, so run files one at a time.

@@ -61,11 +61,11 @@ Your PRs here unblock everyone. Aim to merge `chore/scaffold` on day one.
 ## Phase 2 — Rooms, Lobby, and Backend Core
 
 **Branch `feat/room-rpcs`** (merge first, because A is waiting):
-- [ ] `create_room(display_name)`: validate the name, generate a code from A's alphabet (retry on collision), insert the room and host player, set `host_player_id`, `expires_at = now() + interval '12 hours'`. Rate limit: no more than 5 rooms per `auth.uid()` per hour.
-- [ ] `join_room(code, display_name)`: fail with `ROOM_NOT_FOUND`, `ROOM_EXPIRED`, or `ROOM_NOT_JOINABLE` (status ≠ `lobby`, unless this `auth.uid()` already joined, which is a rejoin). Fail with `NAME_TAKEN` if the name matches case-insensitively. Rate limit join attempts.
-- [ ] `get_room_snapshot(code)`: member only. Returns room, players, current round (with no secrets), `me`, `myAnswer`.
-- [ ] All RPCs are `security definer` with `set search_path = public` and `raise exception` using stable error codes.
-- [ ] Local `test:db` tests: happy paths and each error code.
+- [x] `create_room(display_name)`: validate the name, generate a code from A's alphabet (retry on collision), insert the room and host player, set `host_player_id`, `expires_at = now() + interval '12 hours'`. Rate limit: no more than 5 rooms per `auth.uid()` per hour.
+- [x] `join_room(code, display_name)`: fail with `ROOM_NOT_FOUND`, `ROOM_EXPIRED`, or `ROOM_NOT_JOINABLE` (status ≠ `lobby`, unless this `auth.uid()` already joined, which is a rejoin). Fail with `NAME_TAKEN` if the name matches case-insensitively. Rate limit join attempts.
+- [x] `get_room_snapshot(code)`: member only. Returns room, players, current round (with no secrets), `me`, `myAnswer`.
+- [x] All RPCs are `security definer` with `set search_path = public` and `raise exception` using stable error codes. (Used `set search_path = ''`, which is stricter: every name is schema-qualified.)
+- [ ] Local `test:db` tests: happy paths and each error code. Written in `tests/integration/room-rpcs.test.ts` and passing against `dev` (Docker not installed yet). `ROOM_EXPIRED` and `ROOM_NOT_JOINABLE` need the round RPCs to set up, so they are added in `feat/round-rpcs`.
 
 **Branch `feat/round-rpcs`:**
 - [ ] `scripts/sync-content.ts` (run with `tsx`): reads `src/content/*`, splits each item into `public_payload` and `answer_key`, and writes a **new** `supabase/migrations/<ts>_content_sync.sql` with idempotent upserts. Items removed from the source get `active = false`.
