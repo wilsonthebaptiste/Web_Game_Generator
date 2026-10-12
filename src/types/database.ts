@@ -263,6 +263,11 @@ export type Database = {
       create_room: { Args: { display_name: string }; Returns: Json }
       get_room_snapshot: { Args: { code: string }; Returns: Json }
       join_room: { Args: { code: string; display_name: string }; Returns: Json }
+      start_round: { Args: { mode: string; room_id: string }; Returns: Json }
+      submit_answer: {
+        Args: { payload: Json; round_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

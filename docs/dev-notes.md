@@ -121,7 +121,41 @@ Newest entries go at the top of each section.
   28.6 million possible codes, 12-hour expiry, and Supabase's limit of 30 anonymous sign-ins per
   hour per IP.
 
+- **Rounds:** `rpc('start_round', { room_id, mode })` returns the new `Round`;
+  `rpc('submit_answer', { round_id, payload })` returns nothing. Calling `submit_answer` again
+  replaces the player's answer until the reveal (there's no separate edit call). The server keeps
+  only the mode's field, trims word guesses, and updates `submissionCount`. Errors:
+  `NOT_HOST`, `INVALID_MODE`, `NOT_ENOUGH_PLAYERS`, `ROUND_IN_PROGRESS`, `ROUND_LIMIT_REACHED`,
+  `NO_CONTENT_AVAILABLE`, `ROOM_FINISHED`, `ROUND_NOT_FOUND`, `ROUND_NOT_ANSWERING`,
+  `INVALID_ANSWER`, `SELF_VOTE_NOT_ALLOWED`.
+- **Server and client answer checks agree.** `submit_answer` was run side by side with
+  `validateAnswerPayload` on 27 payloads across all three modes, with identical results. One
+  harmless difference: the client counts word-guess length in UTF-16 units and the server in
+  code points, so the server is slightly more lenient with emoji, never stricter. Using
+  `[...text].length` in `validatePayload.ts` would make them identical.
+- **`normalize.ts` says the SQL uses `lower(btrim(text))`,** but `btrim` only strips ASCII
+  spaces. `reveal_round` will trim with the same JS whitespace set as everywhere else, then
+  lowercase, so it matches `normalizeAnswer`.
+
+## Content workflow
+
+1. Contributor B edits `src/content/*.ts` and merges the PR, then tells Contributor C.
+2. Contributor C runs `npm run content:sync`. It writes a new
+   `supabase/migrations/<timestamp>_content_sync.sql`, or prints "Content unchanged" and writes
+   nothing.
+3. C reviews the file, commits it, and applies it with `npx supabase db push`.
+
+The migration upserts every item. Items deleted from `src/content/` are marked `active = false`
+rather than deleted, because old rounds still reference them, and they're never picked again.
+Changing an item's text changes it for future rounds only; rounds already played keep their
+snapshot. Never reuse an old ID for a different question.
+
 ## Tooling and versions
+
+- **PL/pgSQL parameter names can clash with column names.** For example,
+  `on conflict (round_id, player_id)` inside a function with a `round_id` parameter fails as
+  ambiguous. Qualify columns with a table alias, refer to parameters as `function_name.param`,
+  and use `on conflict on constraint <name>`.
 
 - **JavaScript and Postgres disagree on whitespace.** JS `trim()` and `\s` remove Unicode spaces
   (NBSP, U+3000, U+FEFF, line separators). Postgres `btrim()` and `\s` only handle ASCII. The SQL
