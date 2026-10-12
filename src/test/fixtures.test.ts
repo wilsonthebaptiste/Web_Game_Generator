@@ -1,8 +1,10 @@
 // Guards the fixtures themselves, so UI tests built on them stay meaningful.
+import { isValidRoomCode } from '../lib/roomCodes'
 import { GAME_MODES } from '../types/game'
 import {
   AVA_ID,
   BEN_ID,
+  ROOM_CODE,
   answeringSessions,
   finishedSingleWinner,
   finishedTie,
@@ -16,6 +18,11 @@ import {
 const ANSWER_FIELDS = ['correctChoiceId', 'targetAnswer', 'acceptedAnswers']
 
 describe('fixtures', () => {
+  it('uses a room code that passes the real validator', () => {
+    expect(isValidRoomCode(ROOM_CODE)).toBe(true)
+    expect(lobbyHost.room.code).toBe(ROOM_CODE)
+  })
+
   it('marks only the host as host', () => {
     expect(lobbyHost.isHost).toBe(true)
     expect(lobbyGuest.isHost).toBe(false)
