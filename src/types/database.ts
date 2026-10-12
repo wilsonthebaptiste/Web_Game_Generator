@@ -260,7 +260,9 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      create_room: { Args: { display_name: string }; Returns: Json }
+      get_room_snapshot: { Args: { code: string }; Returns: Json }
+      join_room: { Args: { code: string; display_name: string }; Returns: Json }
     }
     Enums: {
       [_ in never]: never

@@ -93,7 +93,44 @@ Newest entries go at the top of each section.
 - **Anonymous sign-ins must be enabled** in each Supabase project (Authentication → Sign In /
   Providers). Without it, sign-in fails.
 
+## Calling the RPCs
+
+- **Argument names are snake_case, results are camelCase.** Call
+  `getSupabase().rpc('create_room', { display_name })`,
+  `rpc('join_room', { code, display_name })`, and `rpc('get_room_snapshot', { code })`. Each
+  returns jsonb already shaped like `RoomMembership` or `RoomSnapshot` from
+  `src/types/game.ts`. The generated types say `Json`, so cast:
+  `data as unknown as RoomMembership`. Don't remap fields.
+- **Errors arrive in `error.message`** as the bare code (`NAME_TAKEN`, `ROOM_NOT_FOUND`, ...).
+  Pass the whole error to `toAppError`. A call with no session fails with Postgres code `42501`
+  (permission denied), which `toAppError` reports as `UNKNOWN`, so always call
+  `ensureAnonymousSession()` first.
+- **The server cleans input the same way the client does.** Codes are normalized like
+  `normalizeRoomCode` and names like `validateDisplayName` (NFC, then JS-style trim). The two
+  were checked against each other on 27 tricky names and 17 codes and agree on every one.
+- **`get_room_snapshot` refuses non-members** with `NOT_A_MEMBER` instead of returning
+  `me: null`, so a room's player list is never visible before joining. RoomPage sends
+  `NOT_A_MEMBER` to `/join/:code`.
+- **Rejoin is automatic.** `join_room` from a browser that's already in the room returns its
+  existing player (and ignores the new name), even after the game has started. New players get
+  `ROOM_NOT_JOINABLE` once the room leaves the lobby. Expired rooms give `ROOM_EXPIRED` to
+  everyone.
+- **Rate limits:** 5 rooms created and 20 new rooms joined per browser per hour, counted from the
+  rows those calls create. **Known gap:** failed attempts (wrong codes) can't be counted, because
+  a raised error rolls back everything the call wrote. Guessing codes is slowed only by the
+  28.6 million possible codes, 12-hour expiry, and Supabase's limit of 30 anonymous sign-ins per
+  hour per IP.
+
 ## Tooling and versions
+
+- **JavaScript and Postgres disagree on whitespace.** JS `trim()` and `\s` remove Unicode spaces
+  (NBSP, U+3000, U+FEFF, line separators). Postgres `btrim()` and `\s` only handle ASCII. The SQL
+  spells out the JS whitespace set in `private.js_whitespace_class()`.
+- **Database tests run against any Supabase instance.** Set `SUPABASE_TEST_URL` and
+  `SUPABASE_TEST_ANON_KEY` (for `dev`, the same values as in `.env`), then `npm run test:db`.
+  Each run signs in about 4 anonymous users and leaves a few test rooms that expire in 12 hours.
+- **`tsconfig.node.json` uses bundler module resolution**, like the app, because Vitest bundles
+  the test files. Imports there don't need `.js` extensions.
 
 - **Current stack:** Node 24, Vite 8, React 19, TypeScript 6, Vitest 5, ESLint 10. Use
   `nvm use` to pick up `.nvmrc`.
