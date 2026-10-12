@@ -1,6 +1,7 @@
 // create_room, join_room, and get_room_snapshot against a real Supabase instance.
-// ROOM_EXPIRED and ROOM_NOT_JOINABLE need a room that has expired or started; clients can't set
-// that up yet, so they are added with the round RPCs (feat/round-rpcs).
+// ROOM_NOT_JOINABLE is covered in round-rpcs.test.ts (it needs a started room). ROOM_EXPIRED
+// needs a room 12 hours old, which a client can't arrange, so it is only checked with direct
+// database access (PGlite) during development.
 import type { RoomMembership, RoomSnapshot } from '../../src/types/game'
 import { errorOf, newBrowser, signedOutBrowser, type TestClient } from './helpers'
 

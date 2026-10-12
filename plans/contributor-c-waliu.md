@@ -65,12 +65,12 @@ Your PRs here unblock everyone. Aim to merge `chore/scaffold` on day one.
 - [x] `join_room(code, display_name)`: fail with `ROOM_NOT_FOUND`, `ROOM_EXPIRED`, or `ROOM_NOT_JOINABLE` (status ≠ `lobby`, unless this `auth.uid()` already joined, which is a rejoin). Fail with `NAME_TAKEN` if the name matches case-insensitively. Rate limit join attempts.
 - [x] `get_room_snapshot(code)`: member only. Returns room, players, current round (with no secrets), `me`, `myAnswer`.
 - [x] All RPCs are `security definer` with `set search_path = public` and `raise exception` using stable error codes. (Used `set search_path = ''`, which is stricter: every name is schema-qualified.)
-- [ ] Local `test:db` tests: happy paths and each error code. Written in `tests/integration/room-rpcs.test.ts` and passing against `dev` (Docker not installed yet). `ROOM_EXPIRED` and `ROOM_NOT_JOINABLE` need the round RPCs to set up, so they are added in `feat/round-rpcs`.
+- [ ] Local `test:db` tests: happy paths and each error code. Written in `tests/integration/` and passing against `dev` (Docker not installed yet). `ROOM_NOT_JOINABLE` is covered in `round-rpcs.test.ts`. `ROOM_EXPIRED` can't be set up from a client (rooms last 12 hours), so it is only checked in PGlite during development.
 
 **Branch `feat/round-rpcs`:**
-- [ ] `scripts/sync-content.ts` (run with `tsx`): reads `src/content/*`, splits each item into `public_payload` and `answer_key`, and writes a **new** `supabase/migrations/<ts>_content_sync.sql` with idempotent upserts. Items removed from the source get `active = false`.
-- [ ] `start_round(room_id, mode)`: host only. Checks there are ≥2 players, the round limit, and that the previous round is revealed. Picks a random active content item for the mode that hasn't been used in this room yet. Inserts `rounds` + `round_secrets`, updates `rooms.status/current_round_id/selected_mode`.
-- [ ] `submit_answer(round_id, payload)`: member only. Checks the round is `answering` and the room is not `finished`. Validates the payload against the mode (mirrors B's `validateAnswerPayload`). Upserts the answer and recomputes `rounds.submission_count`.
+- [x] `scripts/sync-content.ts` (run with `tsx`): reads `src/content/*`, splits each item into `public_payload` and `answer_key`, and writes a **new** `supabase/migrations/<ts>_content_sync.sql` with idempotent upserts. Items removed from the source get `active = false`.
+- [x] `start_round(room_id, mode)`: host only. Checks there are ≥2 players, the round limit, and that the previous round is revealed. Picks a random active content item for the mode that hasn't been used in this room yet. Inserts `rounds` + `round_secrets`, updates `rooms.status/current_round_id/selected_mode`.
+- [x] `submit_answer(round_id, payload)`: member only. Checks the round is `answering` and the room is not `finished`. Validates the payload against the mode (mirrors B's `validateAnswerPayload`). Upserts the answer and recomputes `rounds.submission_count`.
 
 **Branch `feat/room-session`:**
 - [ ] `useRoomSession(code)`: `ensureAnonymousSession` → `getRoomSnapshot` → subscribe through A's `subscribeToRoom` plus a `rounds` subscription. Refetch the snapshot on any event, so events are only notifications.
