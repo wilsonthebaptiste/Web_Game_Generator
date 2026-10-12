@@ -19,9 +19,10 @@ describe('routes', () => {
     expect(screen.getByText(/ABCD/)).toBeInTheDocument()
   })
 
+  // Loading, views, and errors for /room/:code are covered in useRoomSession.test.tsx.
   it('renders the room page at /room/:code', () => {
-    renderAt('/room/ABCD')
-    expect(screen.getByRole('heading', { name: 'Room ABCD' })).toBeInTheDocument()
+    renderAt('/room/ABCDE')
+    expect(screen.getByRole('status')).toHaveTextContent('Connecting to the room')
   })
 
   it('renders a not-found page with a link home for unknown paths', () => {

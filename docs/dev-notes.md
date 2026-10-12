@@ -141,6 +141,26 @@ Newest entries go at the top of each section.
   spaces. `reveal_round` will trim with the same JS whitespace set as everywhere else, then
   lowercase, so it matches `normalizeAnswer`.
 
+## Room session (`useRoomSession` and `RoomPage`)
+
+- **RoomPage owns all loading and errors.** `LobbyPage`, `GamePage`, and `FinalScreen` only
+  render once a session exists, so they never show a spinner or a "room not found" state for the
+  room itself. Non-members are redirected to `/join/<CODE>` (normalized), expired or missing
+  rooms get a message and a link home, and other failures get a "Try again" button.
+- **The session updates itself.** Any realtime change to the room, its players, or its rounds
+  triggers one fresh snapshot (bursts within 100 ms are combined). Your page re-renders with the
+  new `session`; never subscribe or fetch room state yourself.
+- **After your own action, call `await session.refresh()`** to see the result immediately (for
+  example your own answer in `session.myAnswer`, which realtime never sends because `answers`
+  isn't published).
+- **A failed refresh keeps the last good session,** except `ROOM_EXPIRED`, `ROOM_NOT_FOUND`, and
+  `NOT_A_MEMBER`, which end it. `session.connection` is always `'connected'` for now; the real
+  reconnect handling and banner come in Phase 4 (`feat/reconnect`).
+- **Wilson:** `subscribeToRoom(roomId, onChange)` should subscribe to `rooms` filtered
+  `id=eq.<roomId>` and `players` filtered `room_id=eq.<roomId>`, call `onChange` with no
+  arguments, and return a function that removes the channel. The hook already subscribes to
+  `rounds` itself.
+
 ## Content workflow
 
 1. Contributor B edits `src/content/*.ts` and merges the PR, then tells Contributor C.
@@ -156,6 +176,9 @@ snapshot. Never reuse an old ID for a different question.
 
 ## Tooling and versions
 
+- **Don't call `setState` directly in an effect body.** The React hooks lint rule
+  `set-state-in-effect` rejects it. To reset state when an input changes, tag the stored state
+  with the input it belongs to and treat a mismatch as the reset value (see `useRoomSession`).
 - **Avoid backticks in shell one-liners that edit files.** In Git Bash, backticks inside
   double-quoted `node -e "..."` scripts run as command substitution and silently corrupt the
   replacement. Edit Markdown and code with the editor, or put the script in a file.

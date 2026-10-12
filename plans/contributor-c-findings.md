@@ -22,6 +22,47 @@ decisions, answers to A and B, and open items.
 
 ---
 
+## Phase 2 — Room session (`feat/room-session`)
+
+**Status:** built and pushed; **merges after A's `feat/room-services` and `feat/home-page`**
+(plan.md merge order). Until then the real app can't load a room, because A's
+`getRoomSnapshot` and `subscribeToRoom` are still stubs. Everything is tested with those
+services mocked.
+**Checks:** `npm run lint`, `npm run typecheck`, `npm test` (292 tests, 17 new), `npm run build`.
+
+### What was built
+
+| File | Purpose |
+|---|---|
+| `src/app/useRoomSession.ts` | Sign in → snapshot → subscribe (`subscribeToRoom` plus a `rounds` channel) → refetch on events |
+| `src/app/RoomPage.tsx` | Loading, errors, non-member redirect, and the view for `room.status` |
+| `src/app/useRoomSession.test.tsx` | 11 hook tests and 6 RoomPage tests |
+
+### Decisions
+
+- **Events only trigger a refetch,** debounced by 100 ms so a burst (a reveal touches every
+  player row) causes one snapshot request.
+- **The newest request wins.** Each load is numbered; a slow older response is ignored.
+- **Which errors end the session:** before the first snapshot, any error. After it, only
+  `ROOM_EXPIRED`, `ROOM_NOT_FOUND`, `NOT_A_MEMBER`, and `INVALID_ROOM_CODE`; a failed refetch
+  for any other reason keeps the last good session.
+- **RoomPage errors:** `NOT_A_MEMBER` redirects to `/join/<CODE>`. Not found, expired, and
+  invalid codes get a message and a link home with no retry. Everything else gets "Try again".
+- **`connection` is always `'connected'`** for now. Reconnect handling (refetch on reconnect
+  and tab focus, the banner) is Phase 4's `feat/reconnect`, as planned.
+- **The finished view is a placeholder** ("Game over" and a link home) until `FinalScreen` in
+  Phase 4.
+- The React hooks lint rule `set-state-in-effect` doesn't allow resetting state at the start of
+  the effect, so state is tagged with the code and attempt it belongs to instead.
+
+### For A
+
+`subscribeToRoom` must subscribe to `rooms` (`id=eq.<roomId>`) and `players`
+(`room_id=eq.<roomId>`), call `onChange()` with no arguments, and return a cleanup function. The
+hook handles `rounds` itself. Details in `docs/dev-notes.md` ("Room session").
+
+---
+
 ## Phase 2 — Review follow-up (`fix/contract-review-items`)
 
 Fixes for A's review of `feat/shared-contracts` (open items 1–4 above).
@@ -45,7 +86,7 @@ suites rerun on top of the new migration, all passing.
 ## Phase 2 — Rooms, Lobby, and Backend Core
 
 **Branches:** `feat/room-rpcs` (PR #10, `7bb5de1`) and `feat/round-rpcs` (PR #11, `fe08696`),
-both merged and applied to `dev`. `feat/room-session` has not started; it merges after A's
+both merged and applied to `dev`. `feat/room-session` is described above; it merges after A's
 `feat/room-services` and `feat/home-page`.
 **Checks on `main` at `fe08696`:** `npm run lint`, `npm run typecheck`, `npm test` (270 tests),
 `npm run build`, and `npm run test:db` (20 tests against `dev`) all pass.

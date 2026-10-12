@@ -73,8 +73,8 @@ Your PRs here unblock everyone. Aim to merge `chore/scaffold` on day one.
 - [x] `submit_answer(round_id, payload)`: member only. Checks the round is `answering` and the room is not `finished`. Validates the payload against the mode (mirrors B's `validateAnswerPayload`). Upserts the answer and recomputes `rounds.submission_count`.
 
 **Branch `feat/room-session`:**
-- [ ] `useRoomSession(code)`: `ensureAnonymousSession` → `getRoomSnapshot` → subscribe through A's `subscribeToRoom` plus a `rounds` subscription. Refetch the snapshot on any event, so events are only notifications.
-- [ ] `RoomPage`: loading, error, and not-a-member states (non-members are sent to `/join/:code`). Switch views on `room.status` and pass `session` to `LobbyPage`, `GamePage`, or a placeholder for the final screen.
+- [x] `useRoomSession(code)`: `ensureAnonymousSession` → `getRoomSnapshot` → subscribe through A's `subscribeToRoom` plus a `rounds` subscription. Refetch the snapshot on any event, so events are only notifications.
+- [x] `RoomPage`: loading, error, and not-a-member states (non-members are sent to `/join/:code`). Switch views on `room.status` and pass `session` to `LobbyPage`, `GamePage`, or a placeholder for the final screen. (Built and tested with mocked services. Checked end to end once A's `feat/room-services` merges.)
 
 **Done when:** the Phase 2 exit gate passes. Do the console-based security checks yourself.
 
