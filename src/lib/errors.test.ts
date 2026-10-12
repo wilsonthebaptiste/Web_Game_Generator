@@ -38,6 +38,26 @@ describe('toAppError', () => {
     expect(toAppError(input).code).toBe(code)
   })
 
+  it('uses the HTTP status from the supabase-js response', () => {
+    // PostgrestError has no status; it's on the response next to `error`.
+    const error = { message: 'upstream request timeout', code: '', details: null, hint: null }
+    expect(toAppError(error).code).toBe('UNKNOWN')
+    expect(toAppError(error, 503).code).toBe('SERVICE_UNAVAILABLE')
+    expect(toAppError(error, 429).code).toBe('RATE_LIMITED')
+    expect(getErrorMessage(error, 429)).toBe(ERROR_MESSAGES.RATE_LIMITED)
+  })
+
+  it('prefers an RPC error code over the HTTP status', () => {
+    expect(toAppError({ message: 'NAME_TAKEN' }, 400).code).toBe('NAME_TAKEN')
+  })
+
+  it.each([
+    [{ message: 'permission denied for function create_room', code: '42501' }],
+    [{ message: 'JWT expired', code: 'PGRST301' }],
+  ])('treats a missing or expired session as NOT_AUTHENTICATED: %o', (error) => {
+    expect(toAppError(error).code).toBe('NOT_AUTHENTICATED')
+  })
+
   it('never exposes a raw database message', () => {
     const error = toAppError({
       message: 'duplicate key value violates unique constraint "players_room_id_name_key"',

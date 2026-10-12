@@ -2,7 +2,7 @@ import { GAME_LIMITS, type AppError, type AppErrorCode } from '../types/game'
 
 /** Player-facing text for every error code. Keep these short, friendly, and free of internals. */
 export const ERROR_MESSAGES: Record<AppErrorCode, string> = {
-  NAME_INVALID: `Please enter a name between ${GAME_LIMITS.displayNameMinLength} and ${GAME_LIMITS.displayNameMaxLength} characters.`,
+  NAME_INVALID: `Names must be ${GAME_LIMITS.displayNameMinLength}–${GAME_LIMITS.displayNameMaxLength} characters, without line breaks or tabs.`,
   INVALID_ROOM_CODE: "That doesn't look like a room code. Check it and try again.",
   INVALID_MODE: "That game mode isn't available.",
   INVALID_ANSWER: "That answer isn't valid. Check it and try again.",
@@ -58,17 +58,29 @@ export function isAppError(value: unknown): value is AppError {
  *
  * RPCs signal expected failures with `raise exception '<CODE>'`; supabase-js surfaces that as
  * an error whose `message` is the code (optionally followed by `: detail`).
+ *
+ * supabase-js puts the HTTP status on the response, not on the error, so pass it along:
+ *   const { data, error, status } = await getSupabase().rpc(...)
+ *   if (error) throw toAppError(error, status)
  */
-export function toAppError(error: unknown): AppError {
+export function toAppError(error: unknown, httpStatus?: number): AppError {
   if (isAppError(error)) return error
 
-  const { message = '', name = '', status } = describe(error)
+  const described = describe(error)
+  const { message = '', name = '', code = '' } = described
+  const status = httpStatus ?? described.status
 
   const rpcCode = message.split(':', 1)[0].trim()
   if (isAppErrorCode(rpcCode)) return createAppError(rpcCode, error)
 
   if (status === 429) return createAppError('RATE_LIMITED', error)
-  if (status === 401 || name === 'AuthSessionMissingError') {
+  // 42501: called without a session (the anon role has no access). PGRST301: expired JWT.
+  if (
+    status === 401 ||
+    name === 'AuthSessionMissingError' ||
+    code === '42501' ||
+    code === 'PGRST301'
+  ) {
     return createAppError('NOT_AUTHENTICATED', error)
   }
   if (typeof status === 'number' && status >= 500) {
@@ -86,17 +98,23 @@ export function toAppError(error: unknown): AppError {
 }
 
 /** Friendly message for any thrown value. */
-export function getErrorMessage(error: unknown): string {
-  return toAppError(error).message
+export function getErrorMessage(error: unknown, httpStatus?: number): string {
+  return toAppError(error, httpStatus).message
 }
 
-function describe(error: unknown): { message?: string; name?: string; status?: number } {
+function describe(error: unknown): {
+  message?: string
+  name?: string
+  code?: string
+  status?: number
+} {
   if (typeof error === 'string') return { message: error }
   if (typeof error !== 'object' || error === null) return {}
   const record = error as Record<string, unknown>
   return {
     message: typeof record.message === 'string' ? record.message : undefined,
     name: typeof record.name === 'string' ? record.name : undefined,
+    code: typeof record.code === 'string' ? record.code : undefined,
     status: typeof record.status === 'number' ? record.status : undefined,
   }
 }

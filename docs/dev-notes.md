@@ -102,9 +102,12 @@ Newest entries go at the top of each section.
   `src/types/game.ts`. The generated types say `Json`, so cast:
   `data as unknown as RoomMembership`. Don't remap fields.
 - **Errors arrive in `error.message`** as the bare code (`NAME_TAKEN`, `ROOM_NOT_FOUND`, ...).
-  Pass the whole error to `toAppError`. A call with no session fails with Postgres code `42501`
-  (permission denied), which `toAppError` reports as `UNKNOWN`, so always call
-  `ensureAnonymousSession()` first.
+  Pass the error **and the response's HTTP status** to `toAppError`:
+  `const { data, error, status } = await getSupabase().rpc(...)`, then
+  `if (error) throw toAppError(error, status)`. supabase-js puts the status on the response, not
+  on the error, so without it a real 429 or 5xx shows as "Something went wrong". A call with no
+  session (Postgres `42501`) or an expired token (`PGRST301`) becomes `NOT_AUTHENTICATED`, but
+  always call `ensureAnonymousSession()` first.
 - **The server cleans input the same way the client does.** Codes are normalized like
   `normalizeRoomCode` and names like `validateDisplayName` (NFC, then JS-style trim). The two
   were checked against each other on 27 tricky names and 17 codes and agree on every one.
@@ -112,8 +115,9 @@ Newest entries go at the top of each section.
   `me: null`, so a room's player list is never visible before joining. RoomPage sends
   `NOT_A_MEMBER` to `/join/:code`.
 - **Rejoin is automatic.** `join_room` from a browser that's already in the room returns its
-  existing player (and ignores the new name), even after the game has started. New players get
-  `ROOM_NOT_JOINABLE` once the room leaves the lobby. Expired rooms give `ROOM_EXPIRED` to
+  existing player (and ignores the new name), even after the game has started or ended. New
+  players get `ROOM_NOT_JOINABLE` ("already started") while a game is in progress and
+  `ROOM_FINISHED` ("This game has ended") once it's over. Expired rooms give `ROOM_EXPIRED` to
   everyone.
 - **Rate limits:** 5 rooms created and 20 new rooms joined per browser per hour, counted from the
   rows those calls create. **Known gap:** failed attempts (wrong codes) can't be counted, because
@@ -151,6 +155,10 @@ Changing an item's text changes it for future rounds only; rounds already played
 snapshot. Never reuse an old ID for a different question.
 
 ## Tooling and versions
+
+- **Avoid backticks in shell one-liners that edit files.** In Git Bash, backticks inside
+  double-quoted `node -e "..."` scripts run as command substitution and silently corrupt the
+  replacement. Edit Markdown and code with the editor, or put the script in a file.
 
 - **PL/pgSQL parameter names can clash with column names.** For example,
   `on conflict (round_id, player_id)` inside a function with a `round_id` parameter fails as

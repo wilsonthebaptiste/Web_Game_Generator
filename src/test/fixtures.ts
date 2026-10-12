@@ -2,7 +2,7 @@
  * RoomSession fixtures for UI tests and for building views before the backend exists.
  * Owned by Contributor C. Ask for new fixtures rather than editing this file.
  *
- * Cast: Ava (host), Ben, Cleo in room ABCD. Scores are consistent across states:
+ * Cast: Ava (host), Ben, Cleo in room ABCDE. Scores are consistent across states:
  * - answering (round 2): Ava 1, Ben 0, Cleo 1
  * - revealed (round 2): the round's points added on top (see each reveal snapshot)
  * - finished: `finishedTie` (Ava and Ben tied on 3) and `finishedSingleWinner` (Ava on 4)
@@ -21,7 +21,7 @@ import type {
 } from '../types/game'
 
 export const ROOM_ID = 'room-1'
-export const ROOM_CODE = 'ABCD'
+export const ROOM_CODE = 'ABCDE'
 
 const T0 = '2026-01-01T12:00:00.000Z'
 const T_ROUND = '2026-01-01T12:05:00.000Z'
