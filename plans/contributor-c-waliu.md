@@ -74,7 +74,7 @@ Your PRs here unblock everyone. Aim to merge `chore/scaffold` on day one.
 
 **Branch `feat/room-session`:**
 - [x] `useRoomSession(code)`: `ensureAnonymousSession` → `getRoomSnapshot` → subscribe through A's `subscribeToRoom` plus a `rounds` subscription. Refetch the snapshot on any event, so events are only notifications.
-- [x] `RoomPage`: loading, error, and not-a-member states (non-members are sent to `/join/:code`). Switch views on `room.status` and pass `session` to `LobbyPage`, `GamePage`, or a placeholder for the final screen. (Built and tested with mocked services. Checked end to end once A's `feat/room-services` merges.)
+- [x] `RoomPage`: loading, error, and not-a-member states (non-members are sent to `/join/:code`). Switch views on `room.status` and pass `session` to `LobbyPage`, `GamePage`, or a placeholder for the final screen. (Built and tested with mocked services. Merged before A's services by agreement; checked end to end once `feat/room-services` merges.)
 
 **Done when:** the Phase 2 exit gate passes. Do the console-based security checks yourself.
 

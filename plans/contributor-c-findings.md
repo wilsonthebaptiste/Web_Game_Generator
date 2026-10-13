@@ -24,10 +24,11 @@ decisions, answers to A and B, and open items.
 
 ## Phase 2 — Room session (`feat/room-session`)
 
-**Status:** built and pushed; **merges after A's `feat/room-services` and `feat/home-page`**
-(plan.md merge order). Until then the real app can't load a room, because A's
-`getRoomSnapshot` and `subscribeToRoom` are still stubs. Everything is tested with those
-services mocked.
+**Status:** merged **before** A's `feat/room-services` and `feat/home-page`, a change to the
+plan.md merge order agreed with A so `feat/join-lobby` can build on `RoomPage`. This is safe:
+until A's services replace the stubs, `/room/:code` shows "Something went wrong" instead of the
+old placeholder spinner, and nothing else changes. Everything is tested with those services
+mocked; the end-to-end check in two browsers happens when `feat/room-services` merges.
 **Checks:** `npm run lint`, `npm run typecheck`, `npm test` (292 tests, 17 new), `npm run build`.
 
 ### What was built
