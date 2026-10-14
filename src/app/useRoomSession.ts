@@ -1,0 +1,148 @@
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { createAppError, toAppError } from '../lib/errors'
+import { normalizeRoomCode } from '../lib/roomCodes'
+import { ensureAnonymousSession, getSupabase } from '../lib/supabaseClient'
+import { getRoomSnapshot, subscribeToRoom } from '../services/rooms'
+import type { AppError, AppErrorCode, RoomSession, RoomSnapshot } from '../types/game'
+
+export type RoomSessionState =
+  | { status: 'loading' }
+  | { status: 'ready'; session: RoomSession }
+  | { status: 'error'; error: AppError; retry: () => void }
+
+/** Errors that end the session. Anything else during a refetch keeps the last good snapshot. */
+const FATAL_CODES: readonly AppErrorCode[] = [
+  'ROOM_NOT_FOUND',
+  'ROOM_EXPIRED',
+  'NOT_A_MEMBER',
+  'INVALID_ROOM_CODE',
+]
+
+/** Realtime events often arrive in bursts (a reveal updates every player), so wait briefly. */
+export const REFETCH_DEBOUNCE_MS = 100
+
+/**
+ * The single source of room state for RoomPage (plan.md §1.6). It signs the browser in, loads
+ * the authoritative snapshot, then subscribes to realtime changes on the room, its players, and
+ * its rounds. Events are only notifications: every event triggers a fresh snapshot.
+ *
+ * Feature pages never subscribe on their own; they receive the `session` this hook builds.
+ * Reconnect handling (refetch on reconnect and tab focus, the `connection` banner) is added in
+ * feat/reconnect.
+ */
+export function useRoomSession(rawCode: string): RoomSessionState {
+  const code = normalizeRoomCode(rawCode)
+  const [attempt, setAttempt] = useState(0)
+  // State is tagged with the code and attempt it belongs to. When either changes, the old state
+  // is ignored and the hook reports `loading` until the new load finishes.
+  const key = `${code}#${attempt}`
+  const [stored, setStored] = useState<{ key: string; value: RoomSessionState }>({
+    key,
+    value: { status: 'loading' },
+  })
+
+  // Only the newest request may update state, so a slow old response can't overwrite new data.
+  const latestRequest = useRef(0)
+  const hasSession = useRef(false)
+  const refreshRef = useRef<() => Promise<void>>(async () => {})
+
+  const retry = useCallback(() => setAttempt((n) => n + 1), [])
+
+  useEffect(() => {
+    let active = true
+    let unsubscribeRoom: (() => void) | undefined
+    let roundsChannel: ReturnType<ReturnType<typeof getSupabase>['channel']> | undefined
+    let debounce: ReturnType<typeof setTimeout> | undefined
+    hasSession.current = false
+    const setState = (value: RoomSessionState) => setStored({ key, value })
+
+    const fail = (error: AppError) => {
+      if (!active) return
+      hasSession.current = false
+      setState({ status: 'error', error, retry })
+    }
+
+    const apply = (snapshot: RoomSnapshot) => {
+      if (!snapshot.me) {
+        fail(createAppError('NOT_A_MEMBER'))
+        return
+      }
+      const me = snapshot.me
+      hasSession.current = true
+      setState({
+        status: 'ready',
+        session: {
+          ...snapshot,
+          me,
+          isHost: me.id === snapshot.room.hostPlayerId,
+          connection: 'connected',
+          refresh: () => refreshRef.current(),
+        },
+      })
+    }
+
+    const load = async (): Promise<RoomSnapshot | undefined> => {
+      const request = ++latestRequest.current
+      try {
+        const snapshot = await getRoomSnapshot(code)
+        if (active && request === latestRequest.current) apply(snapshot)
+        return snapshot
+      } catch (cause) {
+        const error = toAppError(cause)
+        const stale = !active || request !== latestRequest.current
+        // Before the first snapshot every error is shown. Afterwards only fatal ones are;
+        // a failed refetch keeps the last good state until the next event.
+        if (!stale && (!hasSession.current || FATAL_CODES.includes(error.code))) fail(error)
+        return undefined
+      }
+    }
+
+    refreshRef.current = async () => {
+      await load()
+    }
+
+    const scheduleRefetch = () => {
+      clearTimeout(debounce)
+      debounce = setTimeout(() => void load(), REFETCH_DEBOUNCE_MS)
+    }
+
+    const start = async () => {
+      try {
+        await ensureAnonymousSession()
+      } catch (cause) {
+        fail(toAppError(cause))
+        return
+      }
+      if (!active) return
+
+      const snapshot = await load()
+      if (!active || !snapshot) return
+
+      try {
+        const roomId = snapshot.room.id
+        unsubscribeRoom = subscribeToRoom(roomId, scheduleRefetch)
+        roundsChannel = getSupabase()
+          .channel(`room-rounds:${roomId}`)
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'rounds', filter: `room_id=eq.${roomId}` },
+            scheduleRefetch,
+          )
+          .subscribe()
+      } catch (cause) {
+        fail(toAppError(cause))
+      }
+    }
+
+    void start()
+
+    return () => {
+      active = false
+      clearTimeout(debounce)
+      unsubscribeRoom?.()
+      if (roundsChannel) void getSupabase().removeChannel(roundsChannel)
+    }
+  }, [code, key, retry])
+
+  return stored.key === key ? stored.value : { status: 'loading' }
+}
