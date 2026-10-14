@@ -15,10 +15,40 @@ decisions, answers to A and B, and open items.
 | 2 | `join_room` raises `ROOM_NOT_JOINABLE` for both a started and a finished room. A wants `ROOM_FINISHED` for a finished room, for the Phase 4 "This game has ended" screen. | A | **Done:** migration `20261012234438_join_room_finished.sql` |
 | 3 | `toAppError` reads `error.status`, but supabase-js puts the HTTP status on the response, not on the error, so real 429/5xx responses became `UNKNOWN`. | A | **Done:** `toAppError(error, status?)`. Services pass `status` from the response (see `docs/dev-notes.md`) |
 | 4 | The `NAME_INVALID` message only mentions length. | A | **Done:** "Names must be 1–20 characters, without line breaks or tabs." |
+| 9 | `useRoomSession` used a fixed rounds channel topic, `room-rounds:<roomId>`. realtime-js reuses an open topic, so a quick re-subscribe would throw. | A | **Done:** counter suffix (`fix/rounds-channel-topic`) |
+| 10 | `subscribeToRoom` refetches on `SUBSCRIBED`, but database changes only start ~120 ms later ("Subscribed to PostgreSQL"). A guest joining in that gap stays invisible until the next change. `useRoomSession` now refetches on that confirmation from its rounds channel, which covers it in practice. A should also switch `subscribeToRoom` to the `system` message. | C | To do (A), see `docs/dev-notes.md` |
 | 5 | Drop `getMyAnswer(roundId)` from B's plan. Use `session.myAnswer` plus `session.refresh()` after a submit. | B | Agreed by C |
 | 6 | Word-guess length: the client counts UTF-16 units and the server counts code points. Harmless, because the server is only ever more lenient. `[...text].length` in `validatePayload.ts` would make them identical. | C | Optional (B) |
 | 7 | Docker isn't installed on C's machine, so `npm run test:db` runs against `dev` instead of a local stack. Needed before the Phase 3 scoring parity test. | C | To do (C) |
 | 8 | Branch protection on `main`: Wilson owns the repo. | C | Waiting on A |
+
+---
+
+## Phase 2 — Realtime fixes (`fix/rounds-channel-topic`)
+
+All Phase 2 PRs (#13–#18) are on `main`. Before the exit gate, C ran a realtime smoke test on
+`dev` with three anonymous users (host, guest, outsider).
+
+**Found:** the host did not see the guest join. The test subscribed and then joined right after
+`SUBSCRIBED`, and the event was lost. Diagnosis on `dev`:
+- `SUBSCRIBED` arrived after 96 ms; the server's "Subscribed to PostgreSQL" system message after
+  214 ms. Changes in that 118 ms gap are never delivered.
+- With a pause, or after waiting for the system message, events arrive (sometimes twice).
+- Access rules were not the problem: filtered and unfiltered channels behaved the same.
+
+**Fixed in `useRoomSession`:**
+- The rounds channel refetches on the `postgres_changes` system confirmation. The snapshot
+  covers every table, so this closes the gap for A's `rooms`/`players` channel too.
+- The rounds channel topic has a counter suffix (A's note in `contributor-a-findings.md`).
+  Confirmed in realtime-js 2.117.3: `channel()` returns an existing topic
+  (`RealtimeClient.js:340`), and `on()` after `subscribe()` throws (`RealtimeChannel.js:421`).
+
+**Smoke test after the fix (on `dev`):** the host sees the guest join and the room switch to
+`playing`; the guest sees the round start; the round event contains no answer key; an outsider
+subscribed to the room receives nothing. 416 unit tests, lint, typecheck, and build pass.
+
+**For A:** open item 10. `subscribeToRoom` should refetch on the system message instead of
+`SUBSCRIBED`.
 
 ---
 

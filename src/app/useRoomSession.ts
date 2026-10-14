@@ -21,6 +21,11 @@ const FATAL_CODES: readonly AppErrorCode[] = [
 /** Realtime events often arrive in bursts (a reveal updates every player), so wait briefly. */
 export const REFETCH_DEBOUNCE_MS = 100
 
+// realtime-js returns the already-open channel for a topic it knows, and a subscribed channel
+// throws if listeners are added. removeChannel is async, so a quick retry could get the old
+// channel back. Each subscription therefore gets its own topic (same approach as subscribeToRoom).
+let roundsSubscriptionCount = 0
+
 /**
  * The single source of room state for RoomPage (plan.md §1.6). It signs the browser in, loads
  * the authoritative snapshot, then subscribes to realtime changes on the room, its players, and
@@ -122,12 +127,20 @@ export function useRoomSession(rawCode: string): RoomSessionState {
         const roomId = snapshot.room.id
         unsubscribeRoom = subscribeToRoom(roomId, scheduleRefetch)
         roundsChannel = getSupabase()
-          .channel(`room-rounds:${roomId}`)
+          .channel(`room-rounds:${roomId}:${++roundsSubscriptionCount}`)
           .on(
             'postgres_changes',
             { event: '*', schema: 'public', table: 'rounds', filter: `room_id=eq.${roomId}` },
             scheduleRefetch,
           )
+          // `SUBSCRIBED` fires ~100 ms before the server starts sending database changes
+          // (measured on dev). Changes in that gap are lost, so refetch once the server confirms
+          // "Subscribed to PostgreSQL". The snapshot covers every table, not just rounds.
+          .on('system', {}, (payload: { extension?: string; status?: string }) => {
+            if (payload.extension === 'postgres_changes' && payload.status === 'ok') {
+              scheduleRefetch()
+            }
+          })
           .subscribe()
       } catch (cause) {
         fail(toAppError(cause))

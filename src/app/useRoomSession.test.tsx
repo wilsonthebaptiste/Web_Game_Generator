@@ -101,13 +101,53 @@ describe('useRoomSession', () => {
     renderHook(() => useRoomSession(ROOM_CODE))
     await waitFor(() => expect(mocks.subscribeToRoom).toHaveBeenCalled())
     expect(mocks.subscribeToRoom).toHaveBeenCalledWith(ROOM_ID, expect.any(Function))
-    expect(mocks.channelName).toHaveBeenCalledWith(`room-rounds:${ROOM_ID}`)
+    expect(mocks.channelName).toHaveBeenCalledWith(
+      expect.stringMatching(new RegExp(`^room-rounds:${ROOM_ID}:\\d+$`)),
+    )
     expect(mocks.channel.on).toHaveBeenCalledWith(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'rounds', filter: `room_id=eq.${ROOM_ID}` },
       expect.any(Function),
     )
     expect(mocks.channel.subscribe).toHaveBeenCalled()
+  })
+
+  it('uses a new rounds channel topic for every subscription', async () => {
+    // realtime-js would hand back an already-subscribed channel for a reused topic.
+    const { result } = renderHook(() => useRoomSession(ROOM_CODE))
+    await waitFor(() => expect(mocks.channelName).toHaveBeenCalledTimes(1))
+
+    mocks.getRoomSnapshot.mockRejectedValueOnce({ message: 'ROOM_EXPIRED' })
+    await act(async () => {
+      if (result.current.status === 'ready') await result.current.session.refresh()
+    })
+    act(() => {
+      if (result.current.status === 'error') result.current.retry()
+    })
+    await waitFor(() => expect(mocks.channelName).toHaveBeenCalledTimes(2))
+
+    const [[first], [second]] = mocks.channelName.mock.calls
+    expect(first).not.toBe(second)
+  })
+
+  it('refetches when the server confirms database changes are flowing', async () => {
+    // Changes between SUBSCRIBED and this confirmation are never delivered.
+    renderHook(() => useRoomSession(ROOM_CODE))
+    await waitFor(() => expect(mocks.channel.on).toHaveBeenCalledTimes(2))
+    const [type, , onSystem] = mocks.channel.on.mock.calls[1] as [
+      string,
+      object,
+      (payload: object) => void,
+    ]
+    expect(type).toBe('system')
+
+    act(() => onSystem({ extension: 'presence', status: 'ok' }))
+    await act(() => wait(REFETCH_DEBOUNCE_MS * 2))
+    expect(mocks.getRoomSnapshot).toHaveBeenCalledTimes(1)
+
+    act(() => onSystem({ extension: 'postgres_changes', status: 'ok' }))
+    await act(() => wait(REFETCH_DEBOUNCE_MS * 2))
+    expect(mocks.getRoomSnapshot).toHaveBeenCalledTimes(2)
   })
 
   it('refetches once after a burst of realtime events', async () => {
