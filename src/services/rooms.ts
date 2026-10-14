@@ -1,28 +1,86 @@
-// STUB from chore/scaffold. Ownership passes to Contributor A once the scaffold merges.
-// Implement against the RPCs in plan.md §1.2. Keep these signatures; changing them is a
-// contract change (plan.md §9 rule 1).
+// Room services. Owned by Contributor A. RPCs are defined in
+// supabase/migrations/*_room_rpcs.sql; their results are already camelCase contract shapes.
+import { toAppError } from '../lib/errors'
+import { normalizeRoomCode } from '../lib/roomCodes'
+import { ensureAnonymousSession, getSupabase } from '../lib/supabaseClient'
+import type { Database } from '../types/database'
 import type { CreateRoomInput, RoomMembership, RoomSnapshot } from '../types/game'
 
-/** Calls `create_room`. The caller becomes the host. */
-export async function createRoom(_input: CreateRoomInput): Promise<RoomMembership> {
-  throw new Error('not implemented')
+type RoomRpcs = Pick<
+  Database['public']['Functions'],
+  'create_room' | 'join_room' | 'get_room_snapshot'
+>
+
+/**
+ * Calls a room RPC as this browser's anonymous user. Every failure, including sign-in and
+ * network errors, is rethrown as an AppError with a friendly message.
+ * Shared with `players.ts`; not for use outside the room services.
+ */
+export async function callRoomRpc<Fn extends keyof RoomRpcs>(
+  fn: Fn,
+  args: RoomRpcs[Fn]['Args'],
+): Promise<unknown> {
+  try {
+    await ensureAnonymousSession()
+    const { data, error, status } = await getSupabase().rpc(fn, args)
+    if (error) throw toAppError(error, status)
+    return data
+  } catch (error) {
+    throw toAppError(error)
+  }
 }
 
-/** Calls `get_room_snapshot`. Members only. */
-export async function getRoomSnapshot(_code: string): Promise<RoomSnapshot> {
-  throw new Error('not implemented')
+/** Calls `create_room`. The caller becomes the host. Send the `value` from `validateDisplayName`. */
+export async function createRoom({ displayName }: CreateRoomInput): Promise<RoomMembership> {
+  const data = await callRoomRpc('create_room', { display_name: displayName })
+  return data as RoomMembership
 }
+
+/** Calls `get_room_snapshot`. Members only; non-members get `NOT_A_MEMBER`. */
+export async function getRoomSnapshot(code: string): Promise<RoomSnapshot> {
+  const data = await callRoomRpc('get_room_snapshot', { code: normalizeRoomCode(code) })
+  return data as RoomSnapshot
+}
+
+// realtime-js reuses a channel when the topic is already open, and a subscribed channel can't
+// take new listeners, so every subscription gets its own topic.
+let subscriptionCount = 0
 
 /**
  * Subscribes to realtime changes on this room's `rooms` and `players` rows.
  * `onChange` is only a notification; the caller refetches the snapshot.
+ * `onChange` also fires each time the channel (re)connects, so changes made while it was
+ * connecting or offline are never missed.
  * Returns an unsubscribe function.
  */
-export function subscribeToRoom(_roomId: string, _onChange: () => void): () => void {
-  throw new Error('not implemented')
+export function subscribeToRoom(roomId: string, onChange: () => void): () => void {
+  const supabase = getSupabase()
+  subscriptionCount += 1
+  const channel = supabase
+    .channel(`room:${roomId}:${subscriptionCount}`)
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'rooms', filter: `id=eq.${roomId}` },
+      () => onChange(),
+    )
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'players', filter: `room_id=eq.${roomId}` },
+      () => onChange(),
+    )
+    .subscribe((status) => {
+      if (status === 'SUBSCRIBED') onChange()
+    })
+
+  let active = true
+  return () => {
+    if (!active) return
+    active = false
+    void supabase.removeChannel(channel)
+  }
 }
 
-/** Calls `end_game`. Host only. */
+/** Calls `end_game`. Host only. Implemented in Phase 3 (`feat/lobby-start-game`). */
 export async function endGame(_roomId: string): Promise<void> {
   throw new Error('not implemented')
 }
