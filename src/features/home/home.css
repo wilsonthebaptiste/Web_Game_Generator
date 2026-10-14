@@ -1,0 +1,60 @@
+/* Home page. Owned by Contributor A. Uses tokens from src/app/theme.css. */
+
+.home-header {
+  margin-bottom: var(--space-5);
+}
+
+.home-intro {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.home-joining {
+  margin: var(--space-4) 0 0;
+  font-size: var(--font-size-lg);
+}
+
+.home-code {
+  font-family: ui-monospace, 'Cascadia Mono', Menlo, Consolas, monospace;
+  letter-spacing: 0.15em;
+}
+
+.home-forms {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.home-card {
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.home-card h2 {
+  margin-bottom: var(--space-2);
+  font-size: var(--font-size-lg);
+}
+
+.home-card__text {
+  margin: 0 0 var(--space-4);
+  color: var(--color-text-muted);
+}
+
+.home-card .ui-error {
+  margin-bottom: var(--space-4);
+}
+
+.home-code-input {
+  font-family: ui-monospace, 'Cascadia Mono', Menlo, Consolas, monospace;
+  font-size: var(--font-size-lg);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 400px) {
+  .home-card {
+    padding: var(--space-4);
+  }
+}
