@@ -58,3 +58,134 @@
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
 }
+
+/* Round and results */
+
+.game-round__meta {
+  margin: 0 0 var(--space-2);
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+.game-round__prompt {
+  font-size: var(--font-size-xl);
+}
+
+.game-round__instructions {
+  color: var(--color-text-muted);
+}
+
+.game-round__form {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.game-options {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.game-option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--tap-target);
+  padding: var(--space-3) var(--space-4);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  font-size: var(--font-size-lg);
+  cursor: pointer;
+}
+
+.game-option:has(input:checked) {
+  border-color: var(--color-primary);
+  background: var(--color-surface-muted);
+}
+
+.game-option:has(input:focus-visible) {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+
+.game-options:disabled .game-option {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.game-option input {
+  accent-color: var(--color-primary);
+}
+
+.game-word {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.game-word__label {
+  font-weight: 600;
+}
+
+.game-word__input {
+  min-height: var(--tap-target);
+  padding: var(--space-2) var(--space-3);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font: inherit;
+  font-size: var(--font-size-lg);
+}
+
+.game-word__counter {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.game-round__error {
+  margin: 0;
+  color: var(--color-danger);
+}
+
+.game-round__status {
+  margin-top: var(--space-5);
+  color: var(--color-text-muted);
+}
+
+.game-round__status p {
+  margin: 0 0 var(--space-1);
+}
+
+.game-results__prompt {
+  font-size: var(--font-size-lg);
+}
+
+.game-results__outcome {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-success-bg);
+  font-weight: 600;
+}
+
+.game-results__table {
+  width: 100%;
+  margin-bottom: var(--space-5);
+  border-collapse: collapse;
+}
+
+.game-results__table th,
+.game-results__table td {
+  padding: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+}
+
+.game-mark {
+  color: var(--color-danger);
+  font-weight: 600;
+}
+
+.game-mark--correct {
+  color: var(--color-success);
+}
