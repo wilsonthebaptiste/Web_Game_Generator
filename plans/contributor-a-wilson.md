@@ -46,23 +46,23 @@ Read [`../plan.md`](../plan.md) first. The phase numbers here match it. Your wor
 **Wait for:** C's `feat/room-rpcs` before `feat/room-services`. Build UI against mocked services in the meantime.
 
 **Branch `feat/room-services`:**
-- [ ] Replace C's stubs in `services/rooms.ts` and `services/players.ts` with calls to `supabase.rpc("create_room" | "join_room" | "get_room_snapshot")`.
-- [ ] Call `signInAnonymously()` only if there is no session. Ask C whether this helper lives in `supabaseClient.ts`, and don't duplicate it.
-- [ ] Convert RPC errors into `AppError` using `src/lib/errors.ts`. Never show raw Postgres messages.
-- [ ] `subscribeToRoom(roomId, onChange) → unsubscribe` for Postgres changes on `rooms` and `players` filtered by `room_id`.
-- [ ] Tests with a mocked supabase client: success paths, error-code mapping, unsubscribe cleanup.
+- [x] Replace C's stubs in `services/rooms.ts` and `services/players.ts` with calls to `supabase.rpc("create_room" | "join_room" | "get_room_snapshot")`.
+- [x] Call `signInAnonymously()` only if there is no session. Ask C whether this helper lives in `supabaseClient.ts`, and don't duplicate it. (It does: `ensureAnonymousSession()`.)
+- [x] Convert RPC errors into `AppError` using `src/lib/errors.ts`. Never show raw Postgres messages.
+- [x] `subscribeToRoom(roomId, onChange) → unsubscribe` for Postgres changes on `rooms` and `players` filtered by `room_id`.
+- [x] Tests with a mocked supabase client: success paths, error-code mapping, unsubscribe cleanup.
 
 **Branch `feat/home-page`:**
-- [ ] Create Room form (display name) → `createRoom` → navigate to `/room/:code`.
-- [ ] Join Room form (room code + display name) → `joinRoom` → navigate. On `/join/:code`, prefill the code from the route param.
-- [ ] Client-side validation using `validation.ts` and `roomCodes.ts`. Disable the submit button while a request is in flight so a double click can't create two rooms.
-- [ ] Loading, validation, and error states, each with a visible text message.
-- [ ] RTL tests: invalid input blocks the submit, an error code shows a friendly message, the prefill works.
+- [x] Create Room form (display name) → `createRoom` → navigate to `/room/:code`.
+- [x] Join Room form (room code + display name) → `joinRoom` → navigate. On `/join/:code`, prefill the code from the route param.
+- [x] Client-side validation using `validation.ts` and `roomCodes.ts`. Disable the submit button while a request is in flight so a double click can't create two rooms.
+- [x] Loading, validation, and error states, each with a visible text message.
+- [x] RTL tests: invalid input blocks the submit, an error code shows a friendly message, the prefill works.
 
 **Branch `feat/join-lobby`** (after C's `feat/room-session` and B's `feat/mode-picker` merge):
-- [ ] `LobbyPage({ session }: { session: RoomSession })`: room code, a copy button for the join link (`${origin}/join/${code}`), a player list with a host badge (text + icon, not color alone), and a "you" indicator.
-- [ ] Host sees `ModePicker` (selection is local state for now). Non-hosts see "Waiting for host to start…".
-- [ ] RTL tests: host vs non-host rendering, copy-link behavior, empty and one-player states.
+- [x] `LobbyPage({ session }: { session: RoomSession })`: room code, a copy button for the join link (`${origin}/join/${code}`), a player list with a host badge (text + icon, not color alone), and a "you" indicator.
+- [x] Host sees `ModePicker` (selection is local state for now). Non-hosts see "Waiting for host to start…".
+- [x] RTL tests: host vs non-host rendering, copy-link behavior, empty and one-player states.
 
 **Done when:** the Phase 2 exit gate in `plan.md` passes in two browsers.
 

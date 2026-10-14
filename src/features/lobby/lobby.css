@@ -1,0 +1,136 @@
+/* Lobby. Owned by Contributor A. Uses tokens from src/app/theme.css. */
+
+.lobby-share,
+.lobby-players,
+.lobby-host {
+  margin-bottom: var(--space-5);
+}
+
+.lobby-share {
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+  text-align: center;
+}
+
+.lobby-share__label {
+  display: block;
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+/* Big enough to read from across a room. */
+.lobby-code {
+  margin: 0 0 var(--space-4);
+  font-family: ui-monospace, 'Cascadia Mono', Menlo, Consolas, monospace;
+  font-size: clamp(2.5rem, 14vw, 4rem);
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  line-height: 1.1;
+}
+
+.lobby-link {
+  text-align: left;
+}
+
+.lobby-link__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+.lobby-link__input {
+  flex: 1 1 12rem;
+  min-width: 0;
+  min-height: var(--tap-target);
+  padding: var(--space-2) var(--space-3);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--font-size-sm);
+}
+
+.lobby-link__status {
+  min-height: 1.5em;
+  margin: var(--space-2) 0 0;
+  color: var(--color-success);
+  font-size: var(--font-size-sm);
+}
+
+.lobby-link__status--failed {
+  color: var(--color-danger);
+}
+
+.lobby-player-list {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  list-style: none;
+}
+
+.lobby-player {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--tap-target);
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.lobby-player--me {
+  border-width: 2px;
+  border-color: var(--color-primary);
+}
+
+.lobby-player__name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.lobby-badge {
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.lobby-badge--host {
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+}
+
+.lobby-badge__icon {
+  color: var(--color-warning);
+}
+
+.lobby-badge--me {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.lobby-muted {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.lobby-waiting {
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-muted);
+  font-weight: 600;
+  text-align: center;
+}
