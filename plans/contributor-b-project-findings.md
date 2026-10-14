@@ -81,3 +81,17 @@ General rules:
 - [x] Check B's work against the merged `feat/shared-contracts` contract (§5). One item is still open: `getMyAnswer`.
 - [ ] Confirm the §1.5 payloads and scoring rules with C (use §3–4 above)
 - [ ] Both PRs merged, and C told that the fixtures are ready for the SQL parity test and the content is ready for `content:sync`
+
+## 8. Phase 2: mode picker, round view, results view
+
+| Branch | Files | Tests |
+|---|---|---|
+| `feat/mode-picker` | `src/features/game/ModePicker.tsx`, `modes.ts`, `game.css`, `ModePicker.test.tsx` | Selection, arrow keys, Space, disabled (7 cases) |
+| `feat/round-view` (stacked on `feat/mode-picker`) | `RoundView.tsx`, `TriviaChoices.tsx`, `WordGuessInput.tsx`, `PlayerVote.tsx`, `ResultsView.tsx`, `answerLabel.ts`, tests | All three modes, no leakage before reveal, "No answer", submit/validation/in-flight (32 cases) |
+
+- **Merge order:** `feat/mode-picker` first (A's `feat/join-lobby` embeds it), then `feat/round-view`. The second branch contains the first branch's commit, so once mode-picker is merged its PR diff shrinks to the round-view work only.
+- **`ModePicker` API for A:** `ModePicker({ value: GameMode | null, onChange(mode), disabled?, legend? })`. It uses native radio inputs in a `fieldset`, so keyboard support comes from the browser.
+- **`RoundView({ session, onSubmit? })`:** if `onSubmit` is left out, it calls `submitAnswer(round.id, payload)` and then `session.refresh()`. Payloads go through `validateAnswerPayload` first, and the button is disabled while a request is in flight. Phase 3's `GamePage` can either pass its own `onSubmit` or rely on the default.
+- **`ResultsView({ session, leaderboard?, children? })`:** `leaderboard` is the slot for C's `Leaderboard`, and `children` is the slot for the Phase 3 host controls.
+- `GamePage.tsx` is still the scaffold stub. Switching between `RoundView` and `ResultsView` is Phase 3 (`feat/game-flow`).
+- Correct and incorrect answers already show "✓ Correct" / "✗ Incorrect" as text, which covers part of Phase 4.

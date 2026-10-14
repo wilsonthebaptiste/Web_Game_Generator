@@ -59,18 +59,18 @@ Read [`../plan.md`](../plan.md) first. The phase numbers here match it. Your wor
 You build UI against the fixtures while C builds the round RPCs.
 
 **Branch `feat/mode-picker`** (merge this early, because A's lobby depends on it):
-- [ ] `ModePicker({ value, onChange, disabled })`: three modes with a short description each. Use radio-group semantics so it works from the keyboard.
-- [ ] RTL test: selection and keyboard navigation.
+- [x] `ModePicker({ value, onChange, disabled })`: three modes with a short description each. Use radio-group semantics so it works from the keyboard.
+- [x] RTL test: selection and keyboard navigation.
 
 **Branch `feat/round-view`:**
-- [ ] `RoundView({ session })`: round number, mode label, prompt from `prompt_snapshot`, and the mode-specific input:
+- [x] `RoundView({ session })`: round number, mode label, prompt from `prompt_snapshot`, and the mode-specific input:
   - `TriviaChoices`: radio choices.
   - `WordGuessInput`: text field with a character counter.
   - `PlayerVote`: list of other players (or all players if `allowSelfVote`).
-- [ ] Submission status: "Answer submitted ✓ (you can change it until the host reveals)" or "Waiting for reveal", plus the submitted count `submission_count / players.length`.
-- [ ] `ResultsView({ session })`: correct answer or outcome, each player's answer ("No answer" if missing), and points this round, all from `reveal_snapshot`. Leave a slot for C's `Leaderboard`.
-- [ ] Build against `src/test/fixtures.ts`. Calls go to the stubbed services for now.
-- [ ] RTL tests: each mode renders. **Before the reveal, no other player's answer appears anywhere in the DOM.** After the reveal, missing answers show "No answer".
+- [x] Submission status: "Answer submitted ✓ (you can change it until the host reveals)" or "Waiting for reveal", plus the submitted count `submission_count / players.length`.
+- [x] `ResultsView({ session })`: correct answer or outcome, each player's answer ("No answer" if missing), and points this round, all from `reveal_snapshot`. Leave a slot for C's `Leaderboard`.
+- [x] Build against `src/test/fixtures.ts`. Calls go to the stubbed services for now.
+- [x] RTL tests: each mode renders. **Before the reveal, no other player's answer appears anywhere in the DOM.** After the reveal, missing answers show "No answer".
 
 **Done when:** all three modes render from fixtures with passing tests.
 
