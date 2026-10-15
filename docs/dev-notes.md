@@ -156,6 +156,17 @@ Newest entries go at the top of each section.
 - **A failed refresh keeps the last good session,** except `ROOM_EXPIRED`, `ROOM_NOT_FOUND`, and
   `NOT_A_MEMBER`, which end it. `session.connection` is always `'connected'` for now; the real
   reconnect handling and banner come in Phase 4 (`feat/reconnect`).
+- **`SUBSCRIBED` is not the moment changes start flowing.** The server sends a separate
+  `system` message, `{ extension: 'postgres_changes', status: 'ok' }` ("Subscribed to
+  PostgreSQL"), about 120 ms later on `dev`. Database changes in between are never delivered.
+  To catch them, refetch on that system message, not on `SUBSCRIBED`:
+  `.on('system', {}, (p) => p.extension === 'postgres_changes' && p.status === 'ok' && onChange())`.
+  `useRoomSession` does this on its rounds channel. A single insert can also arrive twice, which
+  the 100 ms debounce absorbs.
+- **Give every channel its own topic.** realtime-js returns the already-open channel for a topic
+  it knows, and adding listeners to a subscribed channel throws. Since `removeChannel` is async, a
+  quick re-subscribe can hit this. Both `subscribeToRoom` and `useRoomSession` add a counter
+  suffix (`room:<id>:<n>`, `room-rounds:<id>:<n>`).
 - **Wilson:** `subscribeToRoom(roomId, onChange)` should subscribe to `rooms` filtered
   `id=eq.<roomId>` and `players` filtered `room_id=eq.<roomId>`, call `onChange` with no
   arguments, and return a function that removes the channel. The hook already subscribes to
