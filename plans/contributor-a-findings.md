@@ -12,8 +12,28 @@ Findings from Contributor A (Wilson, Room and Lobby) while working through
 and `feat/room-session` (#13), plus B's `feat/mode-picker` (#14).
 **Checks:** `npm run lint`, `npm run typecheck`, `npm test` (414 tests, 87 of them new),
 `npm run format:check` and `npm run build` all pass.
-**Merge order:** C's `feat/room-session` merged first by agreement (see C's findings). Mine merge
-in the order `feat/room-services` → `feat/home-page` → `feat/join-lobby`.
+**Merge order:** C's `feat/room-session` merged first by agreement (see C's findings). Mine
+merged in order as PRs #16 (`feat/room-services`), #17 (`feat/home-page`) and #18
+(`feat/join-lobby`).
+**Status: complete.** The Phase 2 exit gate passed on 2026-10-14 against `dev`, with two browsers
+(a normal and a private window).
+
+### Exit gate results
+
+| Check | Result |
+|---|---|
+| Browser 1 creates a room and sees the code and join link. Browser 2 joins by link and both lobbies update without a refresh. | Pass |
+| Copy link, `/join/:code` prefill, and focus on the name field | Pass |
+| Empty name, short code, unknown code (`ZZZZZ`), duplicate name (case-insensitive) | Pass: friendly message each time |
+| Expired room | Can't be set up by hand (rooms last 12 hours). Covered by C's `ROOM_EXPIRED` database tests. |
+| Console as a non-host: `start_round` | Rejected with `NOT_HOST` |
+| Console: `round_secrets`, `content_items`, other players' `answers` | No rows returned |
+| `RoundView` and `ResultsView` from fixtures (B) | Covered by B's RTL tests on `main` |
+
+**Setup for manual testing:** copy `.env.example` to `.env` and fill in the `dev` URL and
+publishable key (ask C). Each browser profile is one anonymous player, so a second player needs a
+private window or another browser. Before any of that, a Node script ran anonymous sign-in,
+`create_room` and a bad-code `join_room` against `dev` to confirm the connection.
 
 ### What was built
 
@@ -99,10 +119,8 @@ in the order `feat/room-services` → `feat/home-page` → `feat/join-lobby`.
   re-subscribes before the old channel is removed (a retry, or Phase 4 reconnects), adding
   listeners to the reused, already-subscribed channel throws. A unique suffix, as in
   `subscribeToRoom`, avoids it. Low priority: the subscribe runs after an awaited fetch, so the
-  StrictMode double mount probably doesn't hit it.
-- **No `.env` locally**, so nothing has been tried against `dev` yet. Ask C for the `dev`
-  publishable key, then run the Phase 2 exit gate in two browsers: create, join, and watch both
-  lobbies update.
+  StrictMode double mount probably doesn't hit it. C's PR #19 (`fix/rounds-channel-topic`)
+  addresses this.
 
 ---
 

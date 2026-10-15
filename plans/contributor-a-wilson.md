@@ -64,7 +64,7 @@ Read [`../plan.md`](../plan.md) first. The phase numbers here match it. Your wor
 - [x] Host sees `ModePicker` (selection is local state for now). Non-hosts see "Waiting for host to start…".
 - [x] RTL tests: host vs non-host rendering, copy-link behavior, empty and one-player states.
 
-**Done when:** the Phase 2 exit gate in `plan.md` passes in two browsers.
+**Done when:** the Phase 2 exit gate in `plan.md` passes in two browsers. ✅ Passed on 2026-10-14 (see [`contributor-a-findings.md`](contributor-a-findings.md)).
 
 ---
 
