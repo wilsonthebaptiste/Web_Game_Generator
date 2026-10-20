@@ -3,7 +3,13 @@ import { createAppError, toAppError } from '../lib/errors'
 import { normalizeRoomCode } from '../lib/roomCodes'
 import { ensureAnonymousSession, getSupabase } from '../lib/supabaseClient'
 import { getRoomSnapshot, subscribeToRoom } from '../services/rooms'
-import type { AppError, AppErrorCode, RoomSession, RoomSnapshot } from '../types/game'
+import type {
+  AppError,
+  AppErrorCode,
+  ConnectionStatus,
+  RoomSession,
+  RoomSnapshot,
+} from '../types/game'
 
 export type RoomSessionState =
   | { status: 'loading' }
@@ -32,8 +38,12 @@ let roundsSubscriptionCount = 0
  * its rounds. Events are only notifications: every event triggers a fresh snapshot.
  *
  * Feature pages never subscribe on their own; they receive the `session` this hook builds.
- * Reconnect handling (refetch on reconnect and tab focus, the `connection` banner) is added in
- * feat/reconnect.
+ *
+ * Reconnects: the snapshot is refetched when the realtime channel errors or re-subscribes after
+ * a drop, when the browser comes back online, and when the tab becomes visible again (phones
+ * pause background tabs). `session.connection` says whether live updates are flowing:
+ * `offline` (the browser has no network), `reconnecting` (realtime is down and realtime-js is
+ * retrying), or `connected`.
  */
 export function useRoomSession(rawCode: string): RoomSessionState {
   const code = normalizeRoomCode(rawCode)
@@ -61,6 +71,23 @@ export function useRoomSession(rawCode: string): RoomSessionState {
     hasSession.current = false
     const setState = (value: RoomSessionState) => setStored({ key, value })
 
+    let online = navigator.onLine
+    // Optimistic until realtime reports a problem, so the banner doesn't flash on first load.
+    let channelUp = true
+    const connection = (): ConnectionStatus =>
+      !online ? 'offline' : channelUp ? 'connected' : 'reconnecting'
+
+    /** Updates `session.connection` without waiting for a snapshot. */
+    const updateConnection = () => {
+      if (!active) return
+      const value = connection()
+      setStored((prev) =>
+        prev.key === key && prev.value.status === 'ready' && prev.value.session.connection !== value
+          ? { key, value: { ...prev.value, session: { ...prev.value.session, connection: value } } }
+          : prev,
+      )
+    }
+
     const fail = (error: AppError) => {
       if (!active) return
       hasSession.current = false
@@ -80,7 +107,7 @@ export function useRoomSession(rawCode: string): RoomSessionState {
           ...snapshot,
           me,
           isHost: me.id === snapshot.room.hostPlayerId,
-          connection: 'connected',
+          connection: connection(),
           refresh: () => refreshRef.current(),
         },
       })
@@ -141,10 +168,41 @@ export function useRoomSession(rawCode: string): RoomSessionState {
               scheduleRefetch()
             }
           })
-          .subscribe()
+          .subscribe((status) => {
+            if (!active) return
+            if (status === 'SUBSCRIBED') {
+              // Back after a drop: catch up on anything missed while realtime was down.
+              if (!channelUp) scheduleRefetch()
+              channelUp = true
+            } else {
+              // CHANNEL_ERROR, TIMED_OUT, or an unexpected CLOSED. realtime-js keeps retrying;
+              // meanwhile the snapshot may still load over HTTP.
+              channelUp = false
+              scheduleRefetch()
+            }
+            updateConnection()
+          })
       } catch (cause) {
         fail(toAppError(cause))
+        return
       }
+
+      window.addEventListener('online', handleOnline)
+      window.addEventListener('offline', handleOffline)
+      document.addEventListener('visibilitychange', handleVisibility)
+    }
+
+    const handleOnline = () => {
+      online = true
+      updateConnection()
+      scheduleRefetch()
+    }
+    const handleOffline = () => {
+      online = false
+      updateConnection()
+    }
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') scheduleRefetch()
     }
 
     void start()
@@ -152,6 +210,9 @@ export function useRoomSession(rawCode: string): RoomSessionState {
     return () => {
       active = false
       clearTimeout(debounce)
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+      document.removeEventListener('visibilitychange', handleVisibility)
       unsubscribeRoom?.()
       if (roundsChannel) void getSupabase().removeChannel(roundsChannel)
     }

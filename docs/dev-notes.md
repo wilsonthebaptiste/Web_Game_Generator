@@ -196,8 +196,21 @@ Newest entries go at the top of each section.
   example your own answer in `session.myAnswer`, which realtime never sends because `answers`
   isn't published).
 - **A failed refresh keeps the last good session,** except `ROOM_EXPIRED`, `ROOM_NOT_FOUND`, and
-  `NOT_A_MEMBER`, which end it. `session.connection` is always `'connected'` for now; the real
-  reconnect handling and banner come in Phase 4 (`feat/reconnect`).
+  `NOT_A_MEMBER`, which end it.
+- **Reconnects are handled for you.** The session refetches when the realtime channel errors,
+  times out, or re-subscribes after a drop, when the browser fires `online`, and when the tab
+  becomes visible again (phones pause background tabs). All of these go through the same 100 ms
+  debounce, so several at once cost one fetch. If the room expired meanwhile, RoomPage shows the
+  expired message and a link home; if the game ended, it shows `FinalScreen`.
+- **`session.connection`** is `'offline'` (the browser has no network), `'reconnecting'`
+  (realtime is down and realtime-js is retrying), or `'connected'`. RoomPage already shows a
+  banner above every view for the first two, so pages don't need their own. Use it only if a
+  control should behave differently, for example a hint next to a disabled button.
+- **Testing browser events:** dispatch `new Event('online')` on `window`. For tab focus,
+  jsdom always reports `visible`, so redefine `document.visibilityState` with a getter
+  (`Object.defineProperty`, `configurable: true`) before dispatching `visibilitychange` on
+  `document`; see `tabBecomes` in `useRoomSession.test.tsx`. Mock `navigator.onLine` with
+  `vi.spyOn(navigator, 'onLine', 'get')`.
 - **`SUBSCRIBED` is not the moment changes start flowing.** The server sends a separate
   `system` message, `{ extension: 'postgres_changes', status: 'ok' }` ("Subscribed to
   PostgreSQL"), about 120 ms later on `dev`. Database changes in between are never delivered.

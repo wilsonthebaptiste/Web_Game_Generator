@@ -5,7 +5,7 @@ import { GamePage } from '../features/game/GamePage'
 import { FinalScreen } from '../features/leaderboard/FinalScreen'
 import { LobbyPage } from '../features/lobby/LobbyPage'
 import { normalizeRoomCode } from '../lib/roomCodes'
-import type { AppErrorCode, RoomSession } from '../types/game'
+import type { AppErrorCode, ConnectionStatus, RoomSession } from '../types/game'
 import { useRoomSession } from './useRoomSession'
 
 /** Errors where retrying can't help, so the page offers a way home instead. */
@@ -49,7 +49,24 @@ export function RoomPage() {
     )
   }
 
-  return <RoomView session={state.session} />
+  return (
+    <>
+      <ConnectionBanner connection={state.session.connection} />
+      <RoomView session={state.session} />
+    </>
+  )
+}
+
+/** Shown above every room view while live updates aren't flowing. Text, not only colour. */
+function ConnectionBanner({ connection }: { connection: ConnectionStatus }) {
+  if (connection === 'connected') return null
+  return (
+    <p className="app-banner" role="status">
+      {connection === 'offline'
+        ? 'You’re offline. The game will catch up when you reconnect.'
+        : 'Reconnecting… The game may be out of date for a moment.'}
+    </p>
+  )
 }
 
 function RoomView({ session }: { session: RoomSession }) {

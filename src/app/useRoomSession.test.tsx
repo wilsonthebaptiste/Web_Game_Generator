@@ -64,6 +64,39 @@ function realtimeCallbacks() {
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
+/** Reports a realtime status for the rounds channel, as realtime-js would. */
+function channelStatus(status: 'SUBSCRIBED' | 'CHANNEL_ERROR' | 'TIMED_OUT' | 'CLOSED') {
+  const callback = mocks.channel.subscribe.mock.calls[0][0] as (s: string) => void
+  act(() => callback(status))
+}
+
+function browserEvent(type: 'online' | 'offline') {
+  act(() => {
+    window.dispatchEvent(new Event(type))
+  })
+}
+
+let visibility: DocumentVisibilityState = 'visible'
+Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => visibility })
+
+function tabBecomes(state: DocumentVisibilityState) {
+  visibility = state
+  act(() => {
+    document.dispatchEvent(new Event('visibilitychange'))
+  })
+}
+
+type HookResult = { current: ReturnType<typeof useRoomSession> }
+const connectionOf = (result: HookResult) =>
+  result.current.status === 'ready' ? result.current.session.connection : result.current.status
+
+/** Renders the hook and waits until it has subscribed. */
+async function connected() {
+  const hook = renderHook(() => useRoomSession(ROOM_CODE))
+  await waitFor(() => expect(mocks.channel.subscribe).toHaveBeenCalled())
+  return hook
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
   mocks.channel.on.mockReturnValue(mocks.channel)
@@ -71,6 +104,8 @@ beforeEach(() => {
   mocks.subscribeToRoom.mockReturnValue(mocks.unsubscribeRoom)
   mocks.ensureAnonymousSession.mockResolvedValue('user-1')
   mocks.getRoomSnapshot.mockResolvedValue(snapshotOf(lobbyGuest))
+  visibility = 'visible'
+  vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(true)
 })
 
 describe('useRoomSession', () => {
@@ -259,6 +294,120 @@ describe('useRoomSession', () => {
   })
 })
 
+describe('useRoomSession: reconnects', () => {
+  it('starts connected and does not refetch on the first SUBSCRIBED', async () => {
+    const { result } = await connected()
+    channelStatus('SUBSCRIBED')
+    await wait(REFETCH_DEBOUNCE_MS * 2)
+    expect(connectionOf(result)).toBe('connected')
+    expect(mocks.getRoomSnapshot).toHaveBeenCalledTimes(1)
+  })
+
+  it.each(['CHANNEL_ERROR', 'TIMED_OUT', 'CLOSED'] as const)(
+    'shows reconnecting and refetches on %s, then catches up when it re-subscribes',
+    async (status) => {
+      const { result } = await connected()
+      channelStatus(status)
+      expect(connectionOf(result)).toBe('reconnecting')
+      await waitFor(() => expect(mocks.getRoomSnapshot).toHaveBeenCalledTimes(2))
+
+      mocks.getRoomSnapshot.mockResolvedValue(snapshotOf(answeringSessions.trivia.notSubmitted))
+      channelStatus('SUBSCRIBED')
+      expect(connectionOf(result)).toBe('connected')
+      await waitFor(() => expect(mocks.getRoomSnapshot).toHaveBeenCalledTimes(3))
+      await waitFor(() =>
+        expect(result.current.status === 'ready' && result.current.session.room.status).toBe(
+          'playing',
+        ),
+      )
+    },
+  )
+
+  it('shows offline, then refetches when the browser is back online', async () => {
+    const { result } = await connected()
+    browserEvent('offline')
+    expect(connectionOf(result)).toBe('offline')
+
+    browserEvent('online')
+    expect(connectionOf(result)).toBe('connected')
+    await waitFor(() => expect(mocks.getRoomSnapshot).toHaveBeenCalledTimes(2))
+  })
+
+  it('stays reconnecting after coming online until realtime re-subscribes', async () => {
+    const { result } = await connected()
+    browserEvent('offline')
+    channelStatus('CHANNEL_ERROR')
+    expect(connectionOf(result)).toBe('offline')
+
+    browserEvent('online')
+    expect(connectionOf(result)).toBe('reconnecting')
+    channelStatus('SUBSCRIBED')
+    expect(connectionOf(result)).toBe('connected')
+  })
+
+  it('starts offline when the browser already is', async () => {
+    vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
+    const { result } = await connected()
+    expect(connectionOf(result)).toBe('offline')
+  })
+
+  it('refetches when the tab becomes visible, not when it is hidden', async () => {
+    await connected()
+    tabBecomes('hidden')
+    await wait(REFETCH_DEBOUNCE_MS * 2)
+    expect(mocks.getRoomSnapshot).toHaveBeenCalledTimes(1)
+
+    tabBecomes('visible')
+    await waitFor(() => expect(mocks.getRoomSnapshot).toHaveBeenCalledTimes(2))
+  })
+
+  it('combines several reconnect signals into one refetch', async () => {
+    await connected()
+    browserEvent('online')
+    tabBecomes('visible')
+    channelStatus('CHANNEL_ERROR')
+    await wait(REFETCH_DEBOUNCE_MS * 3)
+    expect(mocks.getRoomSnapshot).toHaveBeenCalledTimes(2)
+  })
+
+  it('ends the session if the room expired while away', async () => {
+    const { result } = await connected()
+    mocks.getRoomSnapshot.mockRejectedValue({ message: 'ROOM_EXPIRED' })
+    tabBecomes('visible')
+    await waitFor(() => expect(result.current.status).toBe('error'))
+    expect(result.current.status === 'error' && result.current.error.code).toBe('ROOM_EXPIRED')
+  })
+
+  it('shows the finished game if it ended while away', async () => {
+    const { result } = await connected()
+    mocks.getRoomSnapshot.mockResolvedValue(snapshotOf(finishedTie))
+    browserEvent('online')
+    await waitFor(() =>
+      expect(result.current.status === 'ready' && result.current.session.room.status).toBe(
+        'finished',
+      ),
+    )
+  })
+
+  it('keeps the last good state if the reconnect refetch fails', async () => {
+    const { result } = await connected()
+    mocks.getRoomSnapshot.mockRejectedValue(new TypeError('Failed to fetch'))
+    browserEvent('online')
+    await waitFor(() => expect(mocks.getRoomSnapshot).toHaveBeenCalledTimes(2))
+    expect(result.current.status).toBe('ready')
+  })
+
+  it('stops listening on unmount', async () => {
+    const { unmount } = await connected()
+    unmount()
+    browserEvent('online')
+    tabBecomes('visible')
+    channelStatus('CHANNEL_ERROR')
+    await wait(REFETCH_DEBOUNCE_MS * 2)
+    expect(mocks.getRoomSnapshot).toHaveBeenCalledTimes(1)
+  })
+})
+
 describe('RoomPage', () => {
   function renderAt(path: string) {
     const router = createMemoryRouter(routes, { initialEntries: [path] })
@@ -298,6 +447,21 @@ describe('RoomPage', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('This room has expired')
     expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: /home page/i })).toHaveAttribute('href', '/')
+  })
+
+  it('shows a banner while offline or reconnecting, and hides it once connected', async () => {
+    renderAt(`/room/${ROOM_CODE}`)
+    await screen.findByRole('heading', { name: `Lobby ${ROOM_CODE}` })
+    await waitFor(() => expect(mocks.channel.subscribe).toHaveBeenCalled())
+    expect(screen.queryByText(/offline|Reconnecting/)).not.toBeInTheDocument()
+
+    browserEvent('offline')
+    expect(screen.getByText(/You’re offline\./)).toBeInTheDocument()
+    browserEvent('online')
+    channelStatus('CHANNEL_ERROR')
+    expect(screen.getByText(/Reconnecting…/)).toBeInTheDocument()
+    channelStatus('SUBSCRIBED')
+    expect(screen.queryByText(/offline|Reconnecting/)).not.toBeInTheDocument()
   })
 
   it('offers a retry for a network failure', async () => {
