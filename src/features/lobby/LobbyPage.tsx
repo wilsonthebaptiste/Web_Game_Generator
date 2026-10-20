@@ -1,7 +1,10 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { Button } from '../../components/Button'
+import { ErrorMessage } from '../../components/ErrorMessage'
+import { ERROR_MESSAGES, toAppError } from '../../lib/errors'
+import { startRound } from '../../services/rounds'
+import { GAME_LIMITS, type GameMode, type Player, type RoomSession } from '../../types/game'
 import { ModePicker } from '../game/ModePicker'
-import type { GameMode, Player, RoomSession } from '../../types/game'
 import './lobby.css'
 
 export interface LobbyPageProps {
@@ -12,8 +15,6 @@ export interface LobbyPageProps {
 export function LobbyPage({ session }: LobbyPageProps) {
   const { room, players, me, isHost } = session
   const playersHeadingId = useId()
-  // Local for now; Phase 3's Start button sends it to `startRound`.
-  const [mode, setMode] = useState<GameMode | null>(room.selectedMode)
 
   return (
     <main className="app-main lobby">
@@ -50,15 +51,72 @@ export function LobbyPage({ session }: LobbyPageProps) {
       </section>
 
       {isHost ? (
-        <section className="lobby-host" aria-label="Host controls">
-          <ModePicker value={mode} onChange={setMode} legend="Choose a game mode" />
-        </section>
+        <HostControls session={session} />
       ) : (
         <p className="lobby-waiting" role="status">
           Waiting for host to start…
         </p>
       )}
     </main>
+  )
+}
+
+function HostControls({ session }: { session: RoomSession }) {
+  const { room, players } = session
+  const reasonId = useId()
+  const [mode, setMode] = useState<GameMode | null>(room.selectedMode)
+  const [starting, setStarting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  // Blocks a second click before React re-renders the disabled button.
+  const inFlight = useRef(false)
+
+  const blockedReason =
+    players.length < GAME_LIMITS.minPlayersToStart
+      ? ERROR_MESSAGES.NOT_ENOUGH_PLAYERS
+      : mode === null
+        ? 'Choose a game mode to start.'
+        : null
+
+  async function start() {
+    if (inFlight.current || blockedReason !== null || mode === null) return
+    inFlight.current = true
+    setStarting(true)
+    setError(null)
+    try {
+      await startRound(room.id, mode)
+    } catch (err) {
+      inFlight.current = false
+      setStarting(false)
+      setError(toAppError(err).message)
+      return
+    }
+    // The room is now `playing`. Stay disabled; RoomPage swaps in the game view once the
+    // session catches up (here, or through realtime if this refetch fails).
+    await session.refresh()
+  }
+
+  return (
+    <section className="lobby-host" aria-label="Host controls">
+      <ModePicker value={mode} onChange={setMode} disabled={starting} legend="Choose a game mode" />
+      <div className="lobby-start">
+        <Button
+          fullWidth
+          onClick={() => void start()}
+          disabled={blockedReason !== null}
+          isLoading={starting}
+          loadingText="Starting game…"
+          aria-describedby={blockedReason !== null ? reasonId : undefined}
+        >
+          Start game
+        </Button>
+        {blockedReason !== null && (
+          <p id={reasonId} className="lobby-muted">
+            {blockedReason}
+          </p>
+        )}
+        {error !== null && <ErrorMessage title="Couldn’t start the game" message={error} />}
+      </div>
+    </section>
   )
 }
 

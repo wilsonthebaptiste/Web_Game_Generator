@@ -1,5 +1,6 @@
 import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { createAppError } from '../../lib/errors'
 import {
   AVA_ID,
   BEN_ID,
@@ -10,8 +11,15 @@ import {
   ROOM_CODE,
   viewAs,
 } from '../../test/fixtures'
-import type { RoomSession } from '../../types/game'
+import type { AppErrorCode, Round, RoomSession } from '../../types/game'
 import { LobbyPage } from './LobbyPage'
+
+const { startRound } = vi.hoisted(() => ({ startRound: vi.fn() }))
+vi.mock('../../services/rounds', () => ({ startRound }))
+
+beforeEach(() => {
+  startRound.mockReset()
+})
 
 const joinLink = `${window.location.origin}/join/${ROOM_CODE}`
 
@@ -137,6 +145,121 @@ describe('host vs non-host', () => {
     expect(screen.queryByRole('group', { name: 'Choose a game mode' })).not.toBeInTheDocument()
     expect(screen.queryByRole('radio')).not.toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Host controls' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Start game' })).not.toBeInTheDocument()
+  })
+})
+
+describe('start game', () => {
+  const startButton = () => screen.getByRole('button', { name: /Start game|Starting game/ })
+  const withMode = (session: RoomSession): RoomSession => ({
+    ...session,
+    room: { ...session.room, selectedMode: 'trivia' },
+  })
+  const withRefresh = (session: RoomSession) => ({ ...session, refresh: vi.fn(async () => {}) })
+
+  it('is disabled for a lone host, with the reason as text', () => {
+    renderLobby(withMode(lobbyHostAlone))
+
+    expect(startButton()).toBeDisabled()
+    expect(startButton()).toHaveAccessibleDescription('You need at least 2 players to start.')
+    expect(screen.getByText('You need at least 2 players to start.')).toBeVisible()
+  })
+
+  it('is disabled until the host picks a mode, with the reason as text', async () => {
+    const { user } = renderLobby(lobbyHost)
+
+    expect(startButton()).toBeDisabled()
+    expect(startButton()).toHaveAccessibleDescription('Choose a game mode to start.')
+
+    await user.click(screen.getByRole('radio', { name: 'Trivia' }))
+
+    expect(startButton()).toBeEnabled()
+    expect(startButton()).not.toHaveAccessibleDescription()
+  })
+
+  it('starts a round with the selected mode, then refreshes the session', async () => {
+    startRound.mockResolvedValue({ id: 'round-1' } as Round)
+    const session = withRefresh(lobbyHost)
+    const { user } = renderLobby(session)
+
+    await user.click(screen.getByRole('radio', { name: 'Word guessing' }))
+    await user.click(startButton())
+
+    expect(startRound).toHaveBeenCalledOnce()
+    expect(startRound).toHaveBeenCalledWith(lobbyHost.room.id, 'word-guessing')
+    expect(session.refresh).toHaveBeenCalledOnce()
+    expect(startRound.mock.invocationCallOrder[0]).toBeLessThan(
+      session.refresh.mock.invocationCallOrder[0],
+    )
+  })
+
+  it('uses the room’s selected mode when the host does not change it', async () => {
+    startRound.mockResolvedValue({ id: 'round-1' } as Round)
+    const { user } = renderLobby(withRefresh(withMode(lobbyHost)))
+
+    await user.click(startButton())
+
+    expect(startRound).toHaveBeenCalledWith(lobbyHost.room.id, 'trivia')
+  })
+
+  it('ignores a double click while the request is in flight', async () => {
+    startRound.mockReturnValue(new Promise(() => {}))
+    const { user } = renderLobby(withRefresh(withMode(lobbyHost)))
+
+    await user.dblClick(startButton())
+
+    expect(startRound).toHaveBeenCalledOnce()
+    expect(startButton()).toBeDisabled()
+    expect(startButton()).toHaveTextContent('Starting game…')
+    within(screen.getByRole('group', { name: 'Choose a game mode' }))
+      .getAllByRole('radio')
+      .forEach((radio) => expect(radio).toBeDisabled())
+  })
+
+  it('stays disabled after a successful start until the game view takes over', async () => {
+    startRound.mockResolvedValue({ id: 'round-1' } as Round)
+    const { user } = renderLobby(withRefresh(withMode(lobbyHost)))
+
+    await user.click(startButton())
+    await user.click(startButton())
+
+    expect(startRound).toHaveBeenCalledOnce()
+    expect(startButton()).toBeDisabled()
+  })
+
+  it.each<[AppErrorCode, RegExp]>([
+    ['NOT_ENOUGH_PLAYERS', /at least 2 players/],
+    ['NOT_HOST', /Only the host/],
+    ['INVALID_MODE', /game mode isn't available/],
+  ])('shows a friendly message for %s and lets the host retry', async (code, message) => {
+    startRound.mockRejectedValueOnce(createAppError(code))
+    const session = withRefresh(withMode(lobbyHost))
+    const { user } = renderLobby(session)
+
+    await user.click(startButton())
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('Couldn’t start the game')
+    expect(alert).toHaveTextContent(message)
+    expect(session.refresh).not.toHaveBeenCalled()
+    expect(startButton()).toBeEnabled()
+
+    startRound.mockResolvedValueOnce({ id: 'round-1' } as Round)
+    await user.click(startButton())
+
+    expect(startRound).toHaveBeenCalledTimes(2)
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('never shows a raw error message', async () => {
+    startRound.mockRejectedValueOnce(new Error('relation "rounds" does not exist'))
+    const { user } = renderLobby(withRefresh(withMode(lobbyHost)))
+
+    await user.click(startButton())
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('Something went wrong. Please try again.')
+    expect(alert).not.toHaveTextContent(/relation|rounds/)
   })
 })
 

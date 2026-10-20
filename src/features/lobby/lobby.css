@@ -6,6 +6,12 @@
   margin-bottom: var(--space-5);
 }
 
+.lobby-start {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
 .lobby-share {
   padding: var(--space-5);
   border: 1px solid var(--color-border);

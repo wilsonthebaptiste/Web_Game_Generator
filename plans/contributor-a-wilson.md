@@ -73,10 +73,14 @@ Read [`../plan.md`](../plan.md) first. The phase numbers here match it. Your wor
 **Wait for:** B's `feat/round-services`, which provides the real `startRound`.
 
 **Branch `feat/lobby-start-game`:**
-- [ ] "Start game" button: host only, disabled until `players.length >= 2` with the reason shown as text, calls `startRound(roomId, selectedMode)`.
-- [ ] Handle `NOT_ENOUGH_PLAYERS`, `NOT_HOST`, and `INVALID_MODE` with friendly messages, and guard against double clicks.
-- [ ] Add `endGame(roomId)` to `services/rooms.ts` (calls the `end_game` RPC) and tell B and C it has merged.
-- [ ] RTL tests: the button's enabled and disabled states, the call made with the selected mode.
+- [x] "Start game" button: host only, disabled until `players.length >= 2` with the reason shown as text, calls `startRound(roomId, selectedMode)`.
+- [x] Handle `NOT_ENOUGH_PLAYERS`, `NOT_HOST`, and `INVALID_MODE` with friendly messages, and guard against double clicks.
+- [ ] Add `endGame(roomId)` to `services/rooms.ts` (calls the `end_game` RPC) and tell B and C it has merged. The client is done and tested with mocks; what remains:
+  - Open the PR, get it reviewed, and have C squash-merge it.
+  - Tell B and C it has merged. B can start `GamePage` against the `endGame` signature but can't test it end to end yet. C needs to ship the `end_game` RPC and regenerated `database.ts` (`feat/reveal-scoring`).
+  - Once C's RPC is live, drop the local `end_game` type declaration in `rooms.ts`.
+  - Once B's `feat/game-flow` and C's `feat/reveal-scoring` and `feat/scoreboard` have merged, run the two-browser check on `dev`: the host starts a game from the lobby and both browsers move to the game view, then the host ends the game and a real `end_game` call succeeds. Tick this box and the "Done when" line below after it passes.
+- [x] RTL tests: the button's enabled and disabled states, the call made with the selected mode.
 
 **Done when:** the host starts a game from the lobby and both browsers move to the game view.
 
