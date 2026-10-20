@@ -2,6 +2,7 @@ import { Link, Navigate, useParams } from 'react-router-dom'
 import { ErrorMessage } from '../components/ErrorMessage'
 import { LoadingState } from '../components/LoadingState'
 import { GamePage } from '../features/game/GamePage'
+import { FinalScreen } from '../features/leaderboard/FinalScreen'
 import { LobbyPage } from '../features/lobby/LobbyPage'
 import { normalizeRoomCode } from '../lib/roomCodes'
 import type { AppErrorCode, RoomSession } from '../types/game'
@@ -58,14 +59,6 @@ function RoomView({ session }: { session: RoomSession }) {
     case 'playing':
       return <GamePage session={session} />
     case 'finished':
-      // Placeholder until FinalScreen (feat/final-screen, Phase 4).
-      return (
-        <main className="app-main">
-          <h1>Game over</h1>
-          <p>
-            <Link to="/">Create a new room</Link>
-          </p>
-        </main>
-      )
+      return <FinalScreen session={session} />
   }
 }

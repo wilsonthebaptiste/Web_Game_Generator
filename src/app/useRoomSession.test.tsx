@@ -282,6 +282,8 @@ describe('RoomPage', () => {
     mocks.getRoomSnapshot.mockResolvedValue(snapshotOf(finishedTie))
     renderAt(`/room/${ROOM_CODE}`)
     expect(await screen.findByRole('heading', { name: 'Game over' })).toBeInTheDocument()
+    expect(screen.getByText('🏆 It’s a tie!')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Final scores' })).toBeInTheDocument()
   })
 
   it('sends non-members to the join form with the code filled in', async () => {

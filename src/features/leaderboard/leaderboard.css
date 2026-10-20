@@ -54,3 +54,33 @@
 .lb__empty {
   color: var(--color-text-muted);
 }
+
+/* Final screen */
+
+.lb-final__winner {
+  margin-bottom: var(--space-5);
+  padding: var(--space-4);
+  border: 2px solid var(--color-primary);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+  text-align: center;
+}
+
+.lb-final__headline {
+  margin: 0;
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.lb-final__detail {
+  margin: var(--space-2) 0 0;
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+
+.lb-final__new {
+  margin-top: var(--space-5);
+  text-decoration: none;
+}
