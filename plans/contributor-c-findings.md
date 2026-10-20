@@ -21,6 +21,37 @@ decisions, answers to A and B, and open items.
 | 6 | Word-guess length: the client counts UTF-16 units and the server counts code points. Harmless, because the server is only ever more lenient. `[...text].length` in `validatePayload.ts` would make them identical. | C | Optional (B) |
 | 7 | Docker isn't installed on C's machine, so `npm run test:db` runs against `dev` instead of a local stack. Needed before the Phase 3 scoring parity test. | C | **Done:** Docker Desktop plus `npx supabase start`; parity test runs locally |
 | 8 | Branch protection on `main`: Wilson owns the repo. | C | Waiting on A |
+| 11 | Supabase paused `party-game-prod` on 2026-10-18 after 7 days without traffic (Free plan). Nothing uses prod yet, so it stays paused; restore it from the dashboard (within 90 days) at the start of the deploy phase. Once live, a quiet week would take the site down again, and `dev` can pause the same way. The team needs to decide before launch: Pro plan, or accept the risk. | C | Decide before deploy (team) |
+
+---
+
+## Phase 3 — Scoreboard (`feat/scoreboard`)
+
+### What was built
+
+| File | Purpose |
+|---|---|
+| `src/features/leaderboard/winners.ts` | `computeWinners`, `rankPlayers`, `roundPoints(reveal)` |
+| `src/features/leaderboard/Leaderboard.tsx` | `Leaderboard({ players, highlightPlayerId?, lastRoundPoints?, heading? })` |
+| `src/features/leaderboard/leaderboard.css` | `.lb` styles, theme tokens only |
+| `winners.test.ts`, `Leaderboard.test.tsx` | 15 tests: single winner, ties, all zero, no players, ranks, "(you)", round points |
+
+### Decisions
+
+- **Competition ranking (1, 1, 3).** Ties are labelled "(tied)" for screen readers. Equal
+  scores stay in join order, matching the server's results order.
+- **All zero means everyone wins.** That follows "all players tied for the top score".
+  `FinalScreen` will show "It's a tie!" in that case.
+- **`lastRoundPoints` is a map by player id** and `roundPoints(revealSnapshot)` builds it, so B
+  doesn't map results by hand. A player missing from the map shows "+0".
+- **Added `heading?`** (default "Leaderboard") so `FinalScreen` can say "Final scores" without
+  a second component.
+- **"You" is text, not only colour:** "(you)" after the name, plus a highlighted row.
+
+### For B (Tahshon)
+
+- `feat/game-flow` can embed it now; the snippet is in `docs/dev-notes.md` under Leaderboard.
+  Import from `../leaderboard/Leaderboard` and `../leaderboard/winners`.
 
 ---
 

@@ -197,6 +197,33 @@ Newest entries go at the top of each section.
   arguments, and return a function that removes the channel. The hook already subscribes to
   `rounds` itself.
 
+## Leaderboard (`src/features/leaderboard/`)
+
+- **In `ResultsView`:** pass it through the `leaderboard` slot:
+  ```tsx
+  <ResultsView
+    session={session}
+    leaderboard={
+      <Leaderboard
+        players={session.players}
+        highlightPlayerId={session.me.id}
+        lastRoundPoints={roundPoints(session.currentRound?.revealSnapshot)}
+      />
+    }
+  />
+  ```
+  `session.players[].score` already includes the revealed round, so don't add the round points
+  yourself. `lastRoundPoints` only adds the "This round" column.
+- **Ranks:** highest score first; tied players share a rank (1, 1, 3) and get a hidden "(tied)"
+  for screen readers. Equal scores stay in join order, the same order as
+  `revealSnapshot.results`.
+- **Winners:** `computeWinners(players)` returns everyone tied for the top score, so check
+  `length > 1` for "It's a tie!". If nobody scored, everyone is a winner. It's empty only when
+  there are no players.
+- **Table rows in tests:** Testing Library's `getByRole` doesn't take a regex for the role, so
+  `getAllByRole(/cell|rowheader/)` throws. To read a whole row, use
+  `row.querySelectorAll('th, td')`.
+
 ## Content workflow
 
 1. Contributor B edits `src/content/*.ts` and merges the PR, then tells Contributor C.
