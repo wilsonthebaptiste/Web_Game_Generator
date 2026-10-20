@@ -1,4 +1,5 @@
 import type { RoomSession } from '../../types/game'
+import { Leaderboard } from '../leaderboard/Leaderboard'
 import { HostResultsControls, HostRoundControls } from './HostControls'
 import { ResultsView } from './ResultsView'
 import { RoundView } from './RoundView'
@@ -27,7 +28,18 @@ export function GamePage({ session }: GamePageProps) {
   if (round.status === 'revealed') {
     return (
       <main className="app-main">
-        <ResultsView session={session}>
+        <ResultsView
+          session={session}
+          leaderboard={
+            <Leaderboard
+              players={session.players}
+              highlightPlayerId={session.me.id}
+              lastRoundPoints={Object.fromEntries(
+                (round.revealSnapshot?.results ?? []).map((r) => [r.playerId, r.pointsAwarded]),
+              )}
+            />
+          }
+        >
           {session.isHost ? (
             <HostResultsControls key={round.id} session={session} round={round} />
           ) : (

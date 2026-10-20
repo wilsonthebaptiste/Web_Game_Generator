@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createAppError } from '../../lib/errors'
 import { submitAnswer } from '../../services/answers'
@@ -63,6 +63,18 @@ describe('GamePage: switches on the round status', () => {
     render(<GamePage session={revealedSessions[mode]} />)
     expect(screen.getByRole('heading', { name: 'Results' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /answer/i })).not.toBeInTheDocument()
+  })
+
+  it.each(GAME_MODES)('%s shows the leaderboard with this round’s points on results', (mode) => {
+    render(<GamePage session={revealedSessions[mode]} />)
+    const board = screen.getByRole('region', { name: 'Leaderboard' })
+    expect(within(board).getByRole('columnheader', { name: 'This round' })).toBeInTheDocument()
+    expect(within(board).getByText(/\(you\)/)).toBeInTheDocument()
+  })
+
+  it('shows no leaderboard while answering', () => {
+    render(<GamePage session={answeringSessions.trivia.submitted} />)
+    expect(screen.queryByRole('region', { name: 'Leaderboard' })).not.toBeInTheDocument()
   })
 
   it('waits for the host when there is no round yet', () => {

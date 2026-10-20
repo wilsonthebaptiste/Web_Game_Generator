@@ -6,7 +6,7 @@ import './game.css'
 
 export interface ResultsViewProps {
   session: RoomSession
-  /** Slot for C's `Leaderboard` (wired in Phase 3). */
+  /** Slot for C's `Leaderboard`. `GamePage` fills it. */
   leaderboard?: ReactNode
   /** Slot for host controls (wired in Phase 3). */
   children?: ReactNode

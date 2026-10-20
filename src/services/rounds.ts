@@ -5,13 +5,10 @@ import { ensureAnonymousSession, getSupabase } from '../lib/supabaseClient'
 import type { Database } from '../types/database'
 import type { GameMode, Round } from '../types/game'
 
-type GeneratedFunctions = Database['public']['Functions']
-
-// `reveal_round` ships in C's `feat/reveal-scoring`. Until the generated types include it, its
-// signature comes from plan.md §1.2. Once they do, this entry can be dropped.
-type RoundRpcs = Pick<GeneratedFunctions, 'start_round' | 'submit_answer'> & {
-  reveal_round: { Args: { round_id: string }; Returns: undefined }
-}
+type RoundRpcs = Pick<
+  Database['public']['Functions'],
+  'start_round' | 'submit_answer' | 'reveal_round'
+>
 
 /**
  * Calls a round RPC as this browser's anonymous user. Every failure, including sign-in and
@@ -24,11 +21,7 @@ export async function callRoundRpc<Fn extends keyof RoundRpcs>(
 ): Promise<unknown> {
   try {
     await ensureAnonymousSession()
-    // The cast only widens the name for `reveal_round` (see RoundRpcs); args are checked above.
-    const { data, error, status } = await getSupabase().rpc(
-      fn as keyof GeneratedFunctions,
-      args as never,
-    )
+    const { data, error, status } = await getSupabase().rpc(fn, args)
     if (error) throw toAppError(error, status)
     return data
   } catch (error) {
