@@ -109,13 +109,14 @@ General rules:
 
 ## 10. Phase 3: game flow
 
-`feat/game-flow` was built after A's `endGame` merged (#22). C's `feat/scoreboard` and `feat/reveal-scoring` were still not merged.
+`feat/game-flow` was built after A's `endGame` merged (#22), then rebased onto C's `reveal_round` (#24) and `Leaderboard` (#25).
 
 - `GamePage({ session })` shows `RoundView` while the round is `answering` and `ResultsView` once it is `revealed`. If there's no round yet, it shows a waiting message. Both views are keyed by round ID, so a new round starts with an empty draft and fresh host controls.
 - `HostControls.tsx` holds `HostRoundControls` ("Lock & reveal") and `HostResultsControls` (`ModePicker` + "Next round", plus "End game" using A's `endGame`). One host action runs at a time, guarded by a ref so a double click can't fire twice. On success the controls stay disabled until `session.refresh()` (or realtime) swaps the view. On failure they show a friendly error and re-enable.
 - "Next round" and the mode picker are hidden once `roundNumber >= roundLimit`. Non-hosts never render host controls; they get a waiting line instead.
 - `RoundView` gained the same ref guard, so a double submit sends one request.
-- Tests: `GamePage.test.tsx` (29 cases): status switching, host vs non-host in all three modes, the last round, double-click guards on reveal, next round, end game and submit, validation before sending, and edit → locked → results.
-- **Leaderboard is not embedded yet.** C's `Leaderboard` doesn't exist. Once `feat/scoreboard` merges, pass `leaderboard={<Leaderboard players={session.players} highlightPlayerId={session.me.id} lastRoundPoints={…} />}` to `ResultsView` in `GamePage`.
-- **For C (owner of `src/app/`):** `src/app/useRoomSession.test.tsx:278` ("shows the game for a playing room") looked for the scaffold stub's `Round 2` heading. The real round view's `h1` is the prompt, so that test now fails. Suggested change: `expect(await screen.findByText(/Round 2 of 10/)).toBeInTheDocument()`.
-- **Not verified yet:** the Phase 3 exit gate (two or more browsers against a real database) needs C's `reveal_round`.
+- Tests: `GamePage.test.tsx` (33 cases): the leaderboard on results, status switching, host vs non-host in all three modes, the last round, double-click guards on reveal, next round, end game and submit, validation before sending, and edit → locked → results.
+- `GamePage` passes C's `Leaderboard` into `ResultsView` with `highlightPlayerId = me.id` and `lastRoundPoints` from `revealSnapshot.results`.
+- `rounds.ts` now uses the generated `reveal_round` type; the local stand-in and cast are gone.
+- **One edit outside B's folders, at C's request to merge:** `src/app/useRoomSession.test.tsx:278` looked for the scaffold stub's `Round 2` heading, which the real view replaced with the prompt. It now checks `findByText(/Round 2 of 10/)`.
+- **Not verified yet:** the Phase 3 exit gate (two or more browsers against the dev database, all three modes).

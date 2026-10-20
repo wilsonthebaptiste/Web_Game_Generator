@@ -92,7 +92,7 @@ You build UI against the fixtures while C builds the round RPCs.
 - [x] Submit and edit: validate with `validateAnswerPayload` before sending, disable the button while a request is in flight, and confirm the submission on success.
 - [x] Host controls: "Lock & reveal" (disabled while in flight, so a double click can't fire twice). On results: `ModePicker` + "Next round", and "End game" using A's `endGame`. Hide "Next round" once `round_number === round_limit`.
 - [x] Non-hosts never render host controls. The backend also rejects them, but don't rely on that alone.
-- [ ] Embed C's `Leaderboard` in `ResultsView`. (Blocked: C's `feat/scoreboard` isn't merged. `ResultsView` has a `leaderboard` slot ready, so this is a one-line change in `GamePage`.)
+- [x] Embed C's `Leaderboard` in `ResultsView`.
 - [x] RTL tests: the double-submit guard, host vs non-host controls, the edit-then-locked flow.
 
 **Done when:** the Phase 3 exit gate in `plan.md` passes for all three modes in two or more browsers.
