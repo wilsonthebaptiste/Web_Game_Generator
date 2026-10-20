@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
 import { Button } from '../../components/Button'
 import { toAppError } from '../../lib/errors'
 import { submitAnswer } from '../../services/answers'
@@ -51,6 +51,8 @@ export function RoundView({ session, onSubmit }: RoundViewProps) {
   const [draft, setDraft] = useState<Draft>(() => draftFrom(session.myAnswer))
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Blocks a second submit before React re-renders the disabled button.
+  const inFlight = useRef(false)
 
   if (!round) return null
   const prompt = round.promptSnapshot
@@ -63,7 +65,7 @@ export function RoundView({ session, onSubmit }: RoundViewProps) {
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault()
-    if (pending) return
+    if (inFlight.current) return
     const result = validateAnswerPayload(prompt.mode, payloadFrom(prompt, draft), {
       myPlayerId: session.me.id,
       playerIds: session.players.map((p) => p.id),
@@ -74,6 +76,7 @@ export function RoundView({ session, onSubmit }: RoundViewProps) {
       setError(result.reason)
       return
     }
+    inFlight.current = true
     setPending(true)
     setError(null)
     try {
@@ -86,6 +89,7 @@ export function RoundView({ session, onSubmit }: RoundViewProps) {
     } catch (err) {
       setError(toAppError(err).message)
     } finally {
+      inFlight.current = false
       setPending(false)
     }
   }

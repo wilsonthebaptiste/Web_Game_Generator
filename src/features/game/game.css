@@ -189,3 +189,18 @@
 .game-mark--correct {
   color: var(--color-success);
 }
+
+/* Host controls */
+
+.game-host {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.game-host-wait {
+  margin-top: var(--space-5);
+  color: var(--color-text-muted);
+}
