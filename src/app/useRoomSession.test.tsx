@@ -275,7 +275,7 @@ describe('RoomPage', () => {
   it('shows the game for a playing room', async () => {
     mocks.getRoomSnapshot.mockResolvedValue(snapshotOf(answeringSessions.trivia.notSubmitted))
     renderAt(`/room/${ROOM_CODE}`)
-    expect(await screen.findByRole('heading', { name: 'Round 2' })).toBeInTheDocument()
+    expect(await screen.findByText(/Round 2 of 10/)).toBeInTheDocument()
   })
 
   it('shows the end of the game for a finished room', async () => {
