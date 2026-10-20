@@ -51,9 +51,20 @@ Newest entries go at the top of each section.
   ```sh
   npx supabase start                      # first run downloads images; applies all migrations
   eval "$(npx supabase status -o env | grep -E '^(API_URL|ANON_KEY|SERVICE_ROLE_KEY)=')"
-  SUPABASE_TEST_URL=$API_URL SUPABASE_TEST_ANON_KEY=$ANON_KEY     SUPABASE_TEST_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY npm run test:db
+  SUPABASE_TEST_URL=$API_URL SUPABASE_TEST_ANON_KEY=$ANON_KEY SUPABASE_TEST_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY npm run test:db
   npx supabase stop                       # when done
   ```
+  `supabase start` on an existing local database doesn't apply migrations added since; run
+  `npx supabase migration up --local` after pulling a new one.
+- **If Docker Desktop says "WSL is unresponsive"** (even `wsl -l -v` hangs), `wsl --shutdown`
+  can't help, because the WSL service itself is stuck. In an admin PowerShell run
+  `taskkill /F /IM wslservice.exe`, then `Start-Service WslService`, then start Docker Desktop.
+  A restart also fixes it.
+- **`security.test.ts`** is the map of what a browser can't do: signed-out browsers can't read
+  tables or call RPCs, non-members see nothing, members can't read `round_secrets`,
+  `content_items`, or other players' answers, nobody can write tables directly, private helpers
+  aren't reachable, and finished or expired rooms refuse every action. If you add a table or
+  RPC, add it there.
   `scoring.parity.test.ts` only runs locally: it needs the local service-role key to insert rows
   no player could (self-votes, votes from outside the room). `adminClient()` refuses any
   non-localhost URL, so never pass a hosted project's service key. Against `dev`, the parity file
@@ -66,6 +77,12 @@ Newest entries go at the top of each section.
 
 ## Supabase
 
+- **Old rooms are deleted automatically.** A pg_cron job (`delete-old-rooms`, minute 17 of every
+  hour) deletes rooms more than 24 hours old with their players, rounds, and answers. Rooms
+  already stop working at 12 hours (`ROOM_EXPIRED`). To run it by hand in the SQL editor:
+  `select private.delete_old_rooms();` returns how many rooms it deleted. Check the job with
+  `select * from cron.job;` and its runs with
+  `select * from cron.job_run_details order by start_time desc limit 5;`.
 - **Projects:** `party-game-dev` (ref `nlpqfmsijyeyhfvssain`) and `party-game-prod`
   (ref `defxqdxgrwnwfhjtsaya`), both in us-west-2. Refs aren't secret. The Project URL is always
   `https://<ref>.supabase.co`. Ask Contributor C for the `dev` publishable key for your `.env`.

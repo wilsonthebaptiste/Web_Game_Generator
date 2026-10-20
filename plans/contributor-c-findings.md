@@ -26,6 +26,51 @@ decisions, answers to A and B, and open items.
 
 ---
 
+## Phase 4 — Security tests and cleanup (`test/rls-security`)
+
+### What was built
+
+| File | Purpose |
+|---|---|
+| `tests/integration/security.test.ts` | 24 tests: what signed-out browsers, non-members, members, and hosts can't do |
+| `supabase/migrations/20261020031343_room_cleanup.sql` | pg_cron job deleting rooms older than 24 hours, hourly |
+
+Results: `test:db` 69/69 locally (including the expired-room test); `security.test.ts` 23/23 on
+`dev` (the expired-room test is local only). The cleanup was checked locally in a rolled-back
+transaction: a 25-hour-old room and its player were deleted, a 23-hour-old room was kept, and a
+second run deleted nothing.
+
+### What the tests cover
+
+- **Signed out:** every table and every RPC gives `42501` (permission denied).
+- **Non-members:** no rows from the room in `rooms`, `players`, `rounds`, or `answers`;
+  `get_room_snapshot`, `submit_answer`, `start_round`, `reveal_round`, `end_game` give
+  `NOT_A_MEMBER`.
+- **Members:** `round_secrets` and `content_items` give `42501`; `answers` returns only their own
+  row; neither the `rounds` row nor the snapshot contains any answer-key field before the reveal;
+  host RPCs give `NOT_HOST`.
+- **Direct writes:** insert, update, and delete on all six tables give `42501`, even for the
+  host, and scores and round state are unchanged afterwards. `private` helpers aren't reachable
+  (`PGRST202`, `PGRST106`).
+- **Finished rooms:** answers, reveals, and new rounds give `ROOM_FINISHED`.
+- **Expired rooms (local only):** `join_room`, `get_room_snapshot`, `start_round`,
+  `submit_answer`, `reveal_round`, and `end_game` all give `ROOM_EXPIRED`.
+
+### Decisions
+
+- **pg_cron, not a manual query:** it's available on the Free plan, so cleanup is automatic.
+  Hourly at minute 17, deleting rooms 24 hours after creation (12 hours after they expire).
+  Cascades remove players, rounds, `round_secrets`, and answers.
+- **Not cleaned up:** anonymous `auth.users` rows. They're small and don't expire on their own;
+  if the user count ever matters, a second job can delete anonymous users with no players.
+- **Noted, not fixed:** `start_round` checks expiry before membership, so an outsider who knows a
+  room's id (a UUID, never shown) would see `ROOM_EXPIRED` instead of `NOT_A_MEMBER` for an
+  expired room. Harmless, and changing it would need a new migration for no real gain.
+- **Members can still read an expired room's rows directly** through RLS until the cleanup job
+  deletes it. Every RPC refuses it, and the UI only uses RPCs, so players never see it.
+
+---
+
 ## Phase 4 — Reconnect (`feat/reconnect`)
 
 ### What was built
@@ -85,9 +130,7 @@ decisions, answers to A and B, and open items.
 - Review of B's `feat/game-flow` (#23): `RoundView` and `HostRoundControls` are siblings with the
   same `key={round.id}`, so React logs a duplicate-key warning in 5 GamePage tests. Sent to B;
   one-line fix (open item 12).
-- `test/rls-security` is written (24 security tests, 23 pass on `dev`; the expired-room test
-  needs local Docker) plus a pg_cron cleanup migration that hasn't been applied anywhere. It's
-  waiting on Docker: WSL stopped responding and needs a restart.
+- `test/rls-security` was blocked on Docker (WSL stopped responding); done now, see above.
 
 ---
 

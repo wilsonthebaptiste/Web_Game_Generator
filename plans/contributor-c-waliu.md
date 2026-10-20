@@ -106,13 +106,13 @@ Your PRs here unblock everyone. Aim to merge `chore/scaffold` on day one.
 - [x] Expired or finished room on reconnect → clear message and a link home.
 
 **Branch `test/rls-security`:**
-- [ ] `tests/integration/security.test.ts` with two anonymous sessions:
+- [x] `tests/integration/security.test.ts` with two anonymous sessions:
   - a non-member can't read the room;
   - a member can't read `round_secrets`, `content_items`, or another player's answers;
   - non-hosts can't call host RPCs;
   - nobody can insert or update tables directly;
   - a finished room rejects answers.
-- [ ] Access-time expiry is enforced in every RPC. If `pg_cron` is available on the Free plan, add a migration that cleans up rooms older than 24 hours. Otherwise document a manual cleanup query in the README.
+- [x] Access-time expiry is enforced in every RPC. If `pg_cron` is available on the Free plan, add a migration that cleans up rooms older than 24 hours. Otherwise document a manual cleanup query in the README.
 
 **Branch `docs/manual-test-checklist`:**
 - [ ] `docs/manual-test-checklist.md`: spec §13 turned into step-by-step two-browser scripts (Room/Lobby, Gameplay per mode, End Game, Reconnect, Mobile). Share it with A and B.
