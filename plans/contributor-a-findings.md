@@ -5,6 +5,97 @@ Findings from Contributor A (Wilson, Room and Lobby) while working through
 
 ---
 
+## Phase 3 — Round Loop and Trusted Scoring
+
+**Branches:** `feat/lobby-start-game` (PR #22, merged) and `chore/end-game-generated-types`.
+**Merge order:** #22 merged after B's `feat/round-services` (#21), but ahead of C's
+`feat/reveal-scoring` (#24) and `feat/scoreboard` (#25). This broke the plan.md order, and C was
+told it was deliberate. It was safe because nothing called `endGame` until B's
+`feat/game-flow` (#23).
+**Checks:** `npm run lint`, `npm run typecheck`, `npm run format:check`, `npm test` (507 tests) and
+`npm run build` all pass on `chore/end-game-generated-types`.
+**Status: complete.** The "Done when" check passed on 2026-10-20 against `dev`, in two browser
+windows and at the RPC level.
+
+### Browser check on `dev` (2026-10-20)
+
+Two Edge windows were driven with `playwright-core` against `npm run dev`. Each had its own
+browser context, so each was a separate anonymous player. The host window was desktop width and
+the guest window was a 390px phone width. Room `9X56P`; 16/16 checks passed.
+
+| Check | Result |
+|---|---|
+| Lone host: Start game disabled, "You need at least 2 players to start." shown | Pass |
+| Guest joins by `/join/:code` (code prefilled), sees "Waiting for host to start…", no Start button | Pass |
+| Host lobby shows "Players (2)" without a refresh | Pass |
+| Start stays disabled with "Choose a game mode to start." until Trivia is picked | Pass |
+| Host clicks Start game, and **both windows move to the game view** with the same prompt | Pass |
+| Guest submits, host clicks "Lock & reveal", both windows show Results | Pass |
+| Host clicks "End game" (a real `end_game` call), both windows show "Game over" | Pass |
+
+**Found, in B's code:** the host's console logs React's "Encountered two children with the same
+key" during the answering phase. The duplicate key is the round ID: in `GamePage.tsx`,
+`RoundView` and `HostRoundControls` are siblings that are both keyed `key={round.id}`. Only the
+host renders the controls, which is why only the host warns. Nothing breaks visibly today, but
+duplicate keys can mix up the two components' state when the next round starts, and resetting
+that state is what the key is for. Suggested one-line fix for B: give each its own key, e.g.
+`` key={`round-${round.id}`} `` and `` key={`controls-${round.id}`} ``.
+
+### Live check on `dev` (2026-10-20)
+
+A Node script used two separate anonymous Supabase clients, one acting as the host's browser and
+one as the guest's. It made the same RPC calls and realtime subscriptions the app makes, against
+`dev` (room `M7SKE`).
+
+| Check | Result |
+|---|---|
+| Start with one player | `NOT_ENOUGH_PLAYERS` |
+| Start with an unknown mode | `INVALID_MODE` |
+| Guest calls `start_round` | `NOT_HOST` |
+| Host starts a trivia round | Pass |
+| Both players get the realtime `rooms` → `playing` event | Pass |
+| Both snapshots are `playing` on the same round, with the same prompt and no answer key | Pass |
+| Guest submits, host reveals | Pass |
+| Guest calls `end_game` | `NOT_HOST` |
+| Host calls `end_game` | Pass. Guest gets the realtime `finished` event, and its snapshot is `finished`. |
+
+The browser check above covers what `RoomPage` actually renders.
+
+### What was built
+
+| File | Purpose |
+|---|---|
+| `src/features/lobby/LobbyPage.tsx`, `lobby.css` | `HostControls`: `ModePicker` plus "Start game" |
+| `src/services/rooms.ts` | `endGame(roomId)`, which calls `end_game` |
+| `LobbyPage.test.tsx`, `rooms.test.ts` | 10 lobby tests, 7 `endGame` tests |
+
+### Decisions
+
+- **Start needs a mode as well as 2 players.** A new room has `selectedMode: null`, so the button
+  stays disabled with "Choose a game mode to start." until the host picks one. The 2-player
+  reason reuses the `NOT_ENOUGH_PLAYERS` text from `errors.ts`, so the client and server read the
+  same. The reason is linked with `aria-describedby`.
+- **Double-click guard:** a ref blocks a second click before React re-renders. The button shows
+  "Starting game…", and the mode picker is disabled while the request is in flight.
+- **Stay disabled after a successful start.** The room is already `playing`, so a second start
+  would only fail. The handler calls `session.refresh()` so the host's view switches without
+  waiting for realtime. If that refetch fails, the realtime event still switches it.
+- **Errors:** "Couldn't start the game" plus the friendly text from `toAppError`. Raw errors
+  never reach the page, and the host can retry.
+- **`endGame` follows `rounds.ts`.** It used a local type declaration until C regenerated
+  `database.ts`, and that declaration has now been dropped.
+
+### Notes for the team
+
+- **For B:** the duplicate `key={round.id}` in `GamePage.tsx` (see the browser check above).
+- **For C:** calling `end_game` on an already finished room returns success rather than an
+  error. That's harmless, and arguably right for a double click on "End game". Mention it in
+  `docs/` if it's intended.
+- **For C:** open item 10 (`subscribeToRoom` should refetch on the `system` message) is still on
+  A's list. It's not a Phase 3 item, so it's planned for Phase 4's `fix/home-lobby-polish`.
+
+---
+
 ## Phase 2 — Rooms, Lobby, and Backend Core
 
 **Branches:** `feat/room-services`, `feat/home-page` and `feat/join-lobby`, cut from `main` at
