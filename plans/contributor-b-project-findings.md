@@ -95,3 +95,15 @@ General rules:
 - **`ResultsView({ session, leaderboard?, children? })`:** `leaderboard` is the slot for C's `Leaderboard`, and `children` is the slot for the Phase 3 host controls.
 - `GamePage.tsx` is still the scaffold stub. Switching between `RoundView` and `ResultsView` is Phase 3 (`feat/game-flow`).
 - Correct and incorrect answers already show "✓ Correct" / "✗ Incorrect" as text, which covers part of Phase 4.
+
+## 9. Phase 3: round services
+
+`feat/round-services` was built before C's `feat/reveal-scoring` merged, because A's Start button is waiting on it.
+
+- `startRound(roomId, mode)` → `start_round`, `revealRound(roundId)` → `reveal_round`, `submitAnswer(roundId, payload)` → `submit_answer`. All three sign in first and rethrow every failure as an `AppError` via `toAppError`.
+- `callRoundRpc` in `rounds.ts` is the shared helper (mirrors A's `callRoomRpc`).
+- **`reveal_round` is not in `src/types/database.ts` yet.** `rounds.ts` declares its signature locally (`{ round_id }` → nothing, per plan §1.2) and casts the RPC name. When C regenerates the types, drop the local entry. No shared files were edited.
+- `getMyAnswer` was not added (agreed with C, findings item 5). Use `session.myAnswer` and `session.refresh()`.
+- Tests: `src/services/rounds.test.ts` (19 cases) covers the RPC names and args, the edit-as-resubmit call, every Phase 3 error code, sign-in failure, 5xx and unknown errors.
+- **Not started:** `feat/game-flow`. It waits on C's `Leaderboard` (`feat/scoreboard`) and A's `endGame`, which is still a stub.
+

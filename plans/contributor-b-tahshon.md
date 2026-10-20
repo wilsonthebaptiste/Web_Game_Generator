@@ -81,10 +81,10 @@ You build UI against the fixtures while C builds the round RPCs.
 **Wait for:** C's `feat/reveal-scoring` before `feat/round-services`, and C's `feat/scoreboard` before `feat/game-flow`.
 
 **Branch `feat/round-services`** (merge early, because A's Start button depends on it):
-- [ ] `services/rounds.ts`: `startRound(roomId, mode)`, `revealRound(roundId)`, calling the RPCs.
-- [ ] `services/answers.ts`: `submitAnswer(roundId, payload)` (the server upserts, so editing reuses this call) and `getMyAnswer(roundId)`.
-- [ ] Convert errors to `AppError` (`NOT_HOST`, `ROUND_NOT_ANSWERING`, `ROUND_ALREADY_REVEALED`, `INVALID_ANSWER`, `ROUND_LIMIT_REACHED`, `NO_CONTENT_AVAILABLE`).
-- [ ] Tests with a mocked supabase client.
+- [x] `services/rounds.ts`: `startRound(roomId, mode)`, `revealRound(roundId)`, calling the RPCs.
+- [x] `services/answers.ts`: `submitAnswer(roundId, payload)` (the server upserts, so editing reuses this call). `getMyAnswer(roundId)` was dropped by agreement with C: use `session.myAnswer` plus `session.refresh()`.
+- [x] Convert errors to `AppError` (`NOT_HOST`, `ROUND_NOT_ANSWERING`, `ROUND_ALREADY_REVEALED`, `INVALID_ANSWER`, `ROUND_LIMIT_REACHED`, `NO_CONTENT_AVAILABLE`).
+- [x] Tests with a mocked supabase client.
 - [ ] Tell A when this merges.
 
 **Branch `feat/game-flow`:**
