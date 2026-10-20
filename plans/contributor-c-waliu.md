@@ -115,7 +115,7 @@ Your PRs here unblock everyone. Aim to merge `chore/scaffold` on day one.
 - [x] Access-time expiry is enforced in every RPC. If `pg_cron` is available on the Free plan, add a migration that cleans up rooms older than 24 hours. Otherwise document a manual cleanup query in the README.
 
 **Branch `docs/manual-test-checklist`:**
-- [ ] `docs/manual-test-checklist.md`: spec §13 turned into step-by-step two-browser scripts (Room/Lobby, Gameplay per mode, End Game, Reconnect, Mobile). Share it with A and B.
+- [x] `docs/manual-test-checklist.md`: spec §13 turned into step-by-step two-browser scripts (Room/Lobby, Gameplay per mode, End Game, Reconnect, Mobile). Share it with A and B.
 
 **Done when:** the Phase 4 exit gate passes.
 

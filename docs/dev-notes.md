@@ -35,6 +35,11 @@ Newest entries go at the top of each section.
 
 ## Testing
 
+- **Manual checks:** [`manual-test-checklist.md`](manual-test-checklist.md) is the step-by-step
+  script for real browsers (spec §13). Run it for the Phase 4 gate on `dev` and on production
+  before release. If you change something a step describes (a label, a message, a flow), update
+  the step in the same PR.
+
 - **Fixtures:** `src/test/fixtures.ts` has a session for every state (lobby, answering per
   mode with and without an answer, revealed per mode, finished with and without a tie). Use
   `viewAs(session, playerId)` to see the same state as another player, e.g. the host. Don't
