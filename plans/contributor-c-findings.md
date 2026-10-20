@@ -22,6 +22,38 @@ decisions, answers to A and B, and open items.
 | 7 | Docker isn't installed on C's machine, so `npm run test:db` runs against `dev` instead of a local stack. Needed before the Phase 3 scoring parity test. | C | **Done:** Docker Desktop plus `npx supabase start`; parity test runs locally |
 | 8 | Branch protection on `main`: Wilson owns the repo. | C | Waiting on A |
 | 11 | Supabase paused `party-game-prod` on 2026-10-18 after 7 days without traffic (Free plan). Nothing uses prod yet, so it stays paused; restore it from the dashboard (within 90 days) at the start of the deploy phase. Once live, a quiet week would take the site down again, and `dev` can pause the same way. The team needs to decide before launch: Pro plan, or accept the risk. | C | Decide before deploy (team) |
+| 12 | `GamePage`: `RoundView` and `HostRoundControls` share `key={round.id}` as siblings (React duplicate-key warning). Give the controls e.g. ``key={`host-${round.id}`}``. | C | To do (B) |
+
+---
+
+## Phase 4 — Final screen (`feat/final-screen`)
+
+### What was built
+
+| File | Purpose |
+|---|---|
+| `src/features/leaderboard/FinalScreen.tsx` | Winner headline, final `Leaderboard`, "Create a new room" link |
+| `src/features/leaderboard/leaderboard.css` | `.lb-final` styles |
+| `src/app/RoomPage.tsx` | `finished` renders `FinalScreen` (placeholder removed) |
+| `FinalScreen.test.tsx`, `useRoomSession.test.tsx` | 7 FinalScreen tests; RoomPage test now checks the real screen |
+
+### Decisions
+
+- **Headline:** one winner → "🏆 Ava wins!" and "With 4 points."; several → "🏆 It's a tie!"
+  and "Ava and Ben share the top score with 3 points." The viewer's name gets "(you)".
+- **Nobody scored** is a tie between everyone, the same rule as `computeWinners`.
+- **"Create a new room" is a link** styled as a button, since it navigates home.
+
+### Status of earlier work
+
+- Phase 3 code is all on `main` (#21–#25). The Phase 3 exit gate (manual, two or more browsers)
+  hasn't been run yet; C wrote the checklist for it.
+- Review of B's `feat/game-flow` (#23): `RoundView` and `HostRoundControls` are siblings with the
+  same `key={round.id}`, so React logs a duplicate-key warning in 5 GamePage tests. Sent to B;
+  one-line fix (open item 12).
+- `test/rls-security` is written (24 security tests, 23 pass on `dev`; the expired-room test
+  needs local Docker) plus a pg_cron cleanup migration that hasn't been applied anywhere. It's
+  waiting on Docker: WSL stopped responding and needs a restart.
 
 ---
 

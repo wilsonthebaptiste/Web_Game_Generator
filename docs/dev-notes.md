@@ -220,6 +220,11 @@ Newest entries go at the top of each section.
 - **Winners:** `computeWinners(players)` returns everyone tied for the top score, so check
   `length > 1` for "It's a tie!". If nobody scored, everyone is a winner. It's empty only when
   there are no players.
+- **Final screen:** `RoomPage` renders `FinalScreen` for a `finished` room. It uses
+  `computeWinners` for the headline ("Ava wins!" or "It's a tie!" with every tied name),
+  `Leaderboard` with `heading="Final scores"`, and a "Create a new room" link styled with the
+  `ui-button` classes (a `Link`, not a `Button`, because it navigates). A round the host never
+  revealed before ending stays unscored, so the final scores are the revealed rounds only.
 - **Table rows in tests:** Testing Library's `getByRole` doesn't take a regex for the role, so
   `getAllByRole(/cell|rowheader/)` throws. To read a whole row, use
   `row.querySelectorAll('th, td')`.
