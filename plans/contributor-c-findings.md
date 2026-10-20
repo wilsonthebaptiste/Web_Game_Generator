@@ -91,6 +91,16 @@ second run deleted nothing.
 **For A and B:** please read your sections (A: R and the lobby parts of M; B: G and the game
 parts of M) and tell C if a step doesn't match what you built.
 
+**Answers to A's Phase 3 notes (#29):**
+
+- **`end_game` on a finished room returning success is intended,** so a double click on "End
+  game" never shows an error. It's documented in `docs/dev-notes.md` ("Reveal and end") and in
+  the migration's comment.
+- **A's browser check (16/16) and RPC check (9/9) on `dev`** cover A's "Done when": lobby →
+  trivia round → reveal → end game. The full Phase 3 exit gate also needs the other two modes,
+  answer edits, "No answer", scores across rounds, and a double reveal; that's sections G and E
+  of the checklist.
+
 ---
 
 ## Phase 4 — Reconnect (`feat/reconnect`)
