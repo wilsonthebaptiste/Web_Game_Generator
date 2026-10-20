@@ -88,9 +88,9 @@ Your PRs here unblock everyone. Aim to merge `chore/scaffold` on day one.
 - [x] `tests/integration/scoring.parity.test.ts`: loads B's `scoring.fixtures.json`, creates rooms, players, and answers in local Supabase, calls `reveal_round`, and checks the points. Also covers double reveal, non-host reveal, and answers submitted after the reveal.
 
 **Branch `feat/scoreboard`** (merge before B's `feat/game-flow`):
-- [ ] `winners.ts`: `computeWinners(players) → Player[]` (all players tied for the top score; an empty list if there are no players).
-- [ ] `Leaderboard({ players, highlightPlayerId?, lastRoundPoints? })`: sorted by score, rank shown as a number, "you" marked with text, round deltas.
-- [ ] Vitest tests for `computeWinners` (single winner, ties, all zero). RTL tests for `Leaderboard`.
+- [x] `winners.ts`: `computeWinners(players) → Player[]` (all players tied for the top score; an empty list if there are no players).
+- [x] `Leaderboard({ players, highlightPlayerId?, lastRoundPoints? })`: sorted by score, rank shown as a number, "you" marked with text, round deltas.
+- [x] Vitest tests for `computeWinners` (single winner, ties, all zero). RTL tests for `Leaderboard`.
 
 **Done when:** the Phase 3 exit gate passes and `npm run test:db` is green locally.
 

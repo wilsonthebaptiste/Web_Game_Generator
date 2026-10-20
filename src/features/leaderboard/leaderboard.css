@@ -1,0 +1,56 @@
+/* Leaderboard feature styles (Contributor C). Class names use the .lb- prefix. */
+
+.lb__heading {
+  font-size: var(--font-size-lg);
+}
+
+.lb__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.lb__table th,
+.lb__table td {
+  padding: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+}
+
+.lb__rank,
+.lb__score,
+.lb__delta {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.lb__table thead th:nth-child(n + 3),
+.lb__score,
+.lb__delta {
+  text-align: right;
+}
+
+.lb__name {
+  overflow-wrap: anywhere;
+}
+
+.lb__score {
+  font-weight: 700;
+}
+
+.lb__delta {
+  color: var(--color-text-muted);
+}
+
+/* "(you)" is in the text too, so the highlight is never the only cue. */
+.lb__row--me {
+  background: var(--color-surface-muted);
+}
+
+.lb__row--me .lb__name {
+  font-weight: 700;
+}
+
+.lb__empty {
+  color: var(--color-text-muted);
+}
