@@ -71,6 +71,28 @@ second run deleted nothing.
 
 ---
 
+## Phase 4 — Manual test checklist (`docs/manual-test-checklist`)
+
+`docs/manual-test-checklist.md`: spec §13 as do/see steps for three browsers, about 45 minutes.
+
+- **Sections:** R (room and lobby, friendly errors, host-only checks on the server), G (one round
+  per mode, answer secrecy, double reveal, host controls), C (refresh and reconnect), E (end
+  game, ties, late joiners), M (mobile and accessibility), D (delivery, production only).
+- **A coverage table** maps every §13 item to step IDs, and names the automated test where one
+  also covers it.
+- **Server-side checks without extra tools:** the "Copy as fetch" trick in DevTools replays a
+  real request as the same user, so a non-host can try `end_game` and the host can try a second
+  `reveal_round`.
+- **Wording matches the app** (button labels, messages, badges), checked against the source.
+  If a label changes, the step should change in the same PR (noted in `docs/dev-notes.md`).
+- **Known limitations** are listed so testers don't report them as bugs.
+- The Phase 3 exit gate is sections G and E, so one run can tick both gates' manual items.
+
+**For A and B:** please read your sections (A: R and the lobby parts of M; B: G and the game
+parts of M) and tell C if a step doesn't match what you built.
+
+---
+
 ## Phase 4 — Reconnect (`feat/reconnect`)
 
 ### What was built
