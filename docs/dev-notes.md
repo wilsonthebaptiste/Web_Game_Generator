@@ -46,8 +46,23 @@ Newest entries go at the top of each section.
   Supabase client), call `vi.resetModules()` and `await import(...)` it fresh in each test.
 - **Env vars in tests:** use `vi.stubEnv('VITE_...', value)` and `vi.unstubAllEnvs()` in
   `afterEach`.
-- **`npm run test:db`** runs `tests/integration/` against local Supabase and needs Docker. It
-  passes with no tests, so it's safe to run before the database tests exist.
+- **`npm run test:db`** runs `tests/integration/` against whatever `SUPABASE_TEST_URL` and
+  `SUPABASE_TEST_ANON_KEY` point at. Prefer the local stack (Docker Desktop must be running):
+  ```sh
+  npx supabase start                      # first run downloads images; applies all migrations
+  eval "$(npx supabase status -o env | grep -E '^(API_URL|ANON_KEY|SERVICE_ROLE_KEY)=')"
+  SUPABASE_TEST_URL=$API_URL SUPABASE_TEST_ANON_KEY=$ANON_KEY     SUPABASE_TEST_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY npm run test:db
+  npx supabase stop                       # when done
+  ```
+  `scoring.parity.test.ts` only runs locally: it needs the local service-role key to insert rows
+  no player could (self-votes, votes from outside the room). `adminClient()` refuses any
+  non-localhost URL, so never pass a hosted project's service key. Against `dev`, the parity file
+  is skipped and everything else runs, but mind the 30 anonymous sign-ins per hour.
+- **Seeding rows directly with the service key:** every PostgREST request is its own
+  transaction, so a `deferrable initially deferred` FK (like `rooms.host_player_id`) doesn't help
+  a two-request insert. Point the row at something that already exists, then update it (see
+  `insertRoom` in the parity test). And `insert()` without `.select()` returns `data: null`, so
+  don't treat "no data" as a failure for plain writes.
 
 ## Supabase
 
@@ -138,8 +153,18 @@ Newest entries go at the top of each section.
   code points, so the server is slightly more lenient with emoji, never stricter. Using
   `[...text].length` in `validatePayload.ts` would make them identical.
 - **`normalize.ts` says the SQL uses `lower(btrim(text))`,** but `btrim` only strips ASCII
-  spaces. `reveal_round` will trim with the same JS whitespace set as everywhere else, then
-  lowercase, so it matches `normalizeAnswer`.
+  spaces. `reveal_round` trims with the same JS whitespace set as everywhere else
+  (`private.js_whitespace_class()`), then lowercases, so it matches `normalizeAnswer`.
+- **Reveal and end:** `rpc('reveal_round', { round_id })` and `rpc('end_game', { room_id })`,
+  both host only, both return nothing. Refetch the snapshot (or wait for realtime) to see the
+  result: `currentRound.status` becomes `revealed` with `revealSnapshot` filled in, and
+  `players[].score` already includes the round's points. `revealSnapshot.results` has one entry
+  per player in join order, `answer: null` for players who didn't answer, and `isCorrect: null`
+  in social rounds. Scoring is checked against all 18 cases in `scoring.fixtures.json`.
+  `reveal_round` errors: `NOT_HOST`, `ROUND_NOT_FOUND`, `ROUND_ALREADY_REVEALED` (a double click;
+  points are never added twice), `ROOM_FINISHED`, `ROOM_EXPIRED`. `end_game` is safe to call
+  twice; after it, `start_round` and new joins give `ROOM_FINISHED`. A round that was never
+  revealed stays unscored.
 
 ## Room session (`useRoomSession` and `RoomPage`)
 

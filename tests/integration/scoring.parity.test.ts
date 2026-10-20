@@ -6,7 +6,7 @@
 import { randomUUID } from 'node:crypto'
 import fixtures from '../../src/features/game/rules/scoring.fixtures.json'
 import type { Json } from '../../src/types/database'
-import type { RevealSnapshot } from '../../src/types/game'
+import type { RevealSnapshot, RoomMembership } from '../../src/types/game'
 import { adminClient, isLocalStack, newBrowser, type TestClient } from './helpers'
 
 interface FixtureCase {
@@ -29,6 +29,7 @@ describe.skipIf(!isLocalStack())('scoring parity with scoring.fixtures.json', ()
   // Players other than the host don't need sessions, only auth users to point at.
   const otherUserIds: string[] = []
   let strangerPlayerId: string
+  let bootstrapHostId: string
 
   /** Awaits a query, throwing on error or missing data. */
   async function must<T>(call: PromiseLike<{ data: T; error: unknown }>): Promise<NonNullable<T>> {
@@ -38,20 +39,29 @@ describe.skipIf(!isLocalStack())('scoring parity with scoring.fixtures.json', ()
     return data
   }
 
-  /** A room with the host and the given number of other players, inserted directly. */
+  /** Awaits a write that returns no rows, throwing on error. */
+  async function ok(call: PromiseLike<{ error: unknown }>): Promise<void> {
+    const { error } = await call
+    if (error) throw error
+  }
+
+  /**
+   * A room with the host and the given number of other players, inserted directly. Each insert is
+   * its own transaction here, so the deferred rooms -> players FK can't help: the room starts out
+   * pointing at the bootstrap room's host and is repointed once its own host exists.
+   */
   async function insertRoom(otherPlayers: number) {
     const roomId = randomUUID()
-    const hostPlayerId = randomUUID()
-    await must(
+    await ok(
       admin.from('rooms').insert({
         id: roomId,
         code: randomCode(),
-        host_player_id: hostPlayerId,
+        host_player_id: bootstrapHostId,
         status: 'playing',
       }),
     )
     const players = [
-      { id: hostPlayerId, auth_user_id: hostUserId },
+      { id: randomUUID(), auth_user_id: hostUserId },
       ...otherUserIds.slice(0, otherPlayers).map((auth_user_id) => ({
         id: randomUUID(),
         auth_user_id,
@@ -60,10 +70,11 @@ describe.skipIf(!isLocalStack())('scoring parity with scoring.fixtures.json', ()
     for (const [i, p] of players.entries()) {
       // Stagger join times so results come back in a known order.
       const joined_at = new Date(Date.now() + i).toISOString()
-      await must(
+      await ok(
         admin.from('players').insert({ ...p, room_id: roomId, display_name: `P${i}`, joined_at }),
       )
     }
+    await ok(admin.from('rooms').update({ host_player_id: players[0].id }).eq('id', roomId))
     return { roomId, playerIds: players.map((p) => p.id) }
   }
 
@@ -80,8 +91,21 @@ describe.skipIf(!isLocalStack())('scoring parity with scoring.fixtures.json', ()
       if (error) throw error
       otherUserIds.push(data.user.id)
     }
-    // "stranger" in the fixtures: a real player, but in a different room.
-    strangerPlayerId = (await insertRoom(1)).playerIds[1]
+    // One room made the normal way. Its host anchors the inserted rooms (see insertRoom), and its
+    // second player is the fixtures' "stranger": a real player, but in a different room.
+    const { data, error } = await host.rpc('create_room', { display_name: 'Bootstrap' })
+    if (error) throw error
+    const bootstrap = data as unknown as RoomMembership
+    bootstrapHostId = bootstrap.player.id
+    strangerPlayerId = randomUUID()
+    await ok(
+      admin.from('players').insert({
+        id: strangerPlayerId,
+        room_id: bootstrap.room.id,
+        auth_user_id: otherUserIds[0],
+        display_name: 'Stranger',
+      }),
+    )
   })
 
   it.each((fixtures.cases as FixtureCase[]).map((c) => [c.name, c] as const))(
@@ -120,19 +144,19 @@ describe.skipIf(!isLocalStack())('scoring parity with scoring.fixtures.json', ()
           .select('id')
           .single(),
       )
-      await must(
+      await ok(
         admin.from('round_secrets').insert({
           round_id: round.id,
           answer_key: (fixture.mode === 'social' ? {} : fixture.answerKey) as Json,
         }),
       )
-      await must(admin.from('rooms').update({ current_round_id: round.id }).eq('id', roomId))
+      await ok(admin.from('rooms').update({ current_round_id: round.id }).eq('id', roomId))
       for (const answer of fixture.answers) {
         const payload = { ...answer.payload }
         if (typeof payload.votedPlayerId === 'string') {
           payload.votedPlayerId = ids[payload.votedPlayerId] ?? randomUUID()
         }
-        await must(
+        await ok(
           admin.from('answers').insert({
             round_id: round.id,
             player_id: ids[answer.playerId],

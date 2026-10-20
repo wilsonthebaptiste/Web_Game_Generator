@@ -19,8 +19,46 @@ decisions, answers to A and B, and open items.
 | 10 | `subscribeToRoom` refetches on `SUBSCRIBED`, but database changes only start ~120 ms later ("Subscribed to PostgreSQL"). A guest joining in that gap stays invisible until the next change. `useRoomSession` now refetches on that confirmation from its rounds channel, which covers it in practice. A should also switch `subscribeToRoom` to the `system` message. | C | To do (A), see `docs/dev-notes.md` |
 | 5 | Drop `getMyAnswer(roundId)` from B's plan. Use `session.myAnswer` plus `session.refresh()` after a submit. | B | Agreed by C |
 | 6 | Word-guess length: the client counts UTF-16 units and the server counts code points. Harmless, because the server is only ever more lenient. `[...text].length` in `validatePayload.ts` would make them identical. | C | Optional (B) |
-| 7 | Docker isn't installed on C's machine, so `npm run test:db` runs against `dev` instead of a local stack. Needed before the Phase 3 scoring parity test. | C | To do (C) |
+| 7 | Docker isn't installed on C's machine, so `npm run test:db` runs against `dev` instead of a local stack. Needed before the Phase 3 scoring parity test. | C | **Done:** Docker Desktop plus `npx supabase start`; parity test runs locally |
 | 8 | Branch protection on `main`: Wilson owns the repo. | C | Waiting on A |
+
+---
+
+## Phase 3 — Reveal and scoring (`feat/reveal-scoring`)
+
+### What was built
+
+| File | Purpose |
+|---|---|
+| `supabase/migrations/20261016204418_reveal_and_end_game.sql` | `reveal_round`, `end_game` (applied to `dev`) |
+| `tests/integration/scoring.parity.test.ts` | All 18 cases in `scoring.fixtures.json` through the real `reveal_round` (local only) |
+| `tests/integration/reveal-rpcs.test.ts` | Host only, single scoring, answers locked after reveal, scores carry over, `end_game` |
+| `tests/integration/helpers.ts` | `adminClient()` (localhost only) and `isLocalStack()` |
+| `src/types/database.ts` | Regenerated |
+
+Results: parity 18/18 and `test:db` 45/45 locally; `reveal-rpcs` 7/7 against `dev`.
+
+### Decisions
+
+- **One transaction, row lock first.** `reveal_round` locks the round with `for update`, so a
+  second reveal or a late `submit_answer` waits and then sees `revealed`. Double reveal raises
+  `ROUND_ALREADY_REVEALED` and changes nothing.
+- **Check order:** `NOT_AUTHENTICATED`, `ROUND_NOT_FOUND`, `NOT_A_MEMBER`, `NOT_HOST`,
+  `ROOM_EXPIRED`, `ROOM_FINISHED`, `ROUND_ALREADY_REVEALED`.
+- **Results in join order** (`joined_at`, then id), one per player, so every client renders the
+  same list. Social answers record `points_awarded = 0` on the voter; the points go to the
+  player voted for.
+- **Ignored, not rejected:** answers from players outside the room, votes for players outside
+  the room, and self-votes when `allowSelfVote` is false. The fixtures include these cases.
+- **`end_game` is idempotent** so a double click doesn't show an error. It doesn't reveal an
+  open round.
+
+### For B (Tahshon)
+
+- `reveal_round` and `end_game` are live on `dev` and in `database.ts`, so
+  `feat/round-services` can call them. Both return nothing: refetch, or let realtime do it.
+- Your `scoring.ts` and the server agree on every fixture. If you add a fixture, the parity
+  test picks it up automatically; run it locally before merging.
 
 ---
 
