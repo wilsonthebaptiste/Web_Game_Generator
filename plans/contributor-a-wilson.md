@@ -75,14 +75,10 @@ Read [`../plan.md`](../plan.md) first. The phase numbers here match it. Your wor
 **Branch `feat/lobby-start-game`:**
 - [x] "Start game" button: host only, disabled until `players.length >= 2` with the reason shown as text, calls `startRound(roomId, selectedMode)`.
 - [x] Handle `NOT_ENOUGH_PLAYERS`, `NOT_HOST`, and `INVALID_MODE` with friendly messages, and guard against double clicks.
-- [ ] Add `endGame(roomId)` to `services/rooms.ts` (calls the `end_game` RPC) and tell B and C it has merged. The client is done and tested with mocks; what remains:
-  - Open the PR, get it reviewed, and have C squash-merge it.
-  - Tell B and C it has merged. B can start `GamePage` against the `endGame` signature but can't test it end to end yet. C needs to ship the `end_game` RPC and regenerated `database.ts` (`feat/reveal-scoring`).
-  - Once C's RPC is live, drop the local `end_game` type declaration in `rooms.ts`.
-  - Once B's `feat/game-flow` and C's `feat/reveal-scoring` and `feat/scoreboard` have merged, run the two-browser check on `dev`: the host starts a game from the lobby and both browsers move to the game view, then the host ends the game and a real `end_game` call succeeds. Tick this box and the "Done when" line below after it passes.
+- [x] Add `endGame(roomId)` to `services/rooms.ts` (calls the `end_game` RPC) and tell B and C it has merged. Merged in #22; B's `feat/game-flow` (#23) builds on it. The local `end_game` type declaration was dropped in `chore/end-game-generated-types` once C's #24 regenerated `database.ts`. A real `end_game` call passed on `dev` on 2026-10-20 (see [`contributor-a-findings.md`](contributor-a-findings.md)).
 - [x] RTL tests: the button's enabled and disabled states, the call made with the selected mode.
 
-**Done when:** the host starts a game from the lobby and both browsers move to the game view.
+**Done when:** the host starts a game from the lobby and both browsers move to the game view. ✅ Passed on 2026-10-20 against `dev`, in two Edge windows (16/16 checks) and with two scripted players at the RPC level (17/17 checks). See [`contributor-a-findings.md`](contributor-a-findings.md).
 
 ---
 
