@@ -102,8 +102,8 @@ Your PRs here unblock everyone. Aim to merge `chore/scaffold` on day one.
 - [x] `FinalScreen({ session })`: winner names ("It's a tie!" when there are several), final `Leaderboard`, and a "Create a new room" link home. Wire it into `RoomPage` for `finished`.
 
 **Branch `feat/reconnect`:**
-- [ ] In `useRoomSession`: refetch the snapshot on the realtime channel `SUBSCRIBED` (including re-subscribes), on `window` `online`, and on `visibilitychange` → visible. Expose a `connection` status (`connected` / `reconnecting` / `offline`) so the UI can show a banner.
-- [ ] Expired or finished room on reconnect → clear message and a link home.
+- [x] In `useRoomSession`: refetch the snapshot on the realtime channel `SUBSCRIBED` (including re-subscribes), on `window` `online`, and on `visibilitychange` → visible. Expose a `connection` status (`connected` / `reconnecting` / `offline`) so the UI can show a banner.
+- [x] Expired or finished room on reconnect → clear message and a link home.
 
 **Branch `test/rls-security`:**
 - [ ] `tests/integration/security.test.ts` with two anonymous sessions:
