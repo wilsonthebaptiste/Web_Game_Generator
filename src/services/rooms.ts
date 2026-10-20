@@ -6,10 +6,13 @@ import { ensureAnonymousSession, getSupabase } from '../lib/supabaseClient'
 import type { Database } from '../types/database'
 import type { CreateRoomInput, RoomMembership, RoomSnapshot } from '../types/game'
 
-type RoomRpcs = Pick<
-  Database['public']['Functions'],
-  'create_room' | 'join_room' | 'get_room_snapshot'
->
+type GeneratedFunctions = Database['public']['Functions']
+
+// `end_game` ships in C's `feat/reveal-scoring`. Until the generated types include it, its
+// signature comes from plan.md §1.2. Once they do, this entry can be dropped.
+type RoomRpcs = Pick<GeneratedFunctions, 'create_room' | 'join_room' | 'get_room_snapshot'> & {
+  end_game: { Args: { room_id: string }; Returns: undefined }
+}
 
 /**
  * Calls a room RPC as this browser's anonymous user. Every failure, including sign-in and
@@ -22,7 +25,11 @@ export async function callRoomRpc<Fn extends keyof RoomRpcs>(
 ): Promise<unknown> {
   try {
     await ensureAnonymousSession()
-    const { data, error, status } = await getSupabase().rpc(fn, args)
+    // The cast only widens the name for `end_game` (see RoomRpcs); args are checked above.
+    const { data, error, status } = await getSupabase().rpc(
+      fn as keyof GeneratedFunctions,
+      args as never,
+    )
     if (error) throw toAppError(error, status)
     return data
   } catch (error) {
@@ -80,7 +87,7 @@ export function subscribeToRoom(roomId: string, onChange: () => void): () => voi
   }
 }
 
-/** Calls `end_game`. Host only. Implemented in Phase 3 (`feat/lobby-start-game`). */
-export async function endGame(_roomId: string): Promise<void> {
-  throw new Error('not implemented')
+/** Calls `end_game`. Host only. Sets the room to `finished`. */
+export async function endGame(roomId: string): Promise<void> {
+  await callRoomRpc('end_game', { room_id: roomId })
 }

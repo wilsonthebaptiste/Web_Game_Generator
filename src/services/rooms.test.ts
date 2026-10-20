@@ -1,7 +1,7 @@
 import { isAppError } from '../lib/errors'
 import type { RoomMembership, RoomSnapshot } from '../types/game'
 import { lobbyHost } from '../test/fixtures'
-import { createRoom, getRoomSnapshot, subscribeToRoom } from './rooms'
+import { createRoom, endGame, getRoomSnapshot, subscribeToRoom } from './rooms'
 
 const { supabase, channel, ensureAnonymousSession } = vi.hoisted(() => {
   const channel = {
@@ -125,6 +125,35 @@ describe('getRoomSnapshot', () => {
       await expect(getRoomSnapshot('ABCDE')).rejects.toMatchObject({ code })
     },
   )
+})
+
+describe('endGame', () => {
+  it('signs in and calls end_game with the room id', async () => {
+    rpcResolves(null)
+
+    await expect(endGame('room-1')).resolves.toBeUndefined()
+    expect(ensureAnonymousSession).toHaveBeenCalledOnce()
+    expect(supabase.rpc).toHaveBeenCalledWith('end_game', { room_id: 'room-1' })
+    expect(ensureAnonymousSession.mock.invocationCallOrder[0]).toBeLessThan(
+      supabase.rpc.mock.invocationCallOrder[0],
+    )
+  })
+
+  it.each(['NOT_HOST', 'NOT_A_MEMBER', 'ROOM_NOT_FOUND', 'ROOM_EXPIRED', 'ROOM_FINISHED'])(
+    'maps %s',
+    async (code) => {
+      rpcFails(code)
+      const error = await endGame('room-1').catch((e: unknown) => e)
+      expect(isAppError(error)).toBe(true)
+      expect(error).toMatchObject({ code })
+    },
+  )
+
+  it('maps a thrown network error to NETWORK_ERROR', async () => {
+    supabase.rpc.mockRejectedValue(new TypeError('Failed to fetch'))
+
+    await expect(endGame('room-1')).rejects.toMatchObject({ code: 'NETWORK_ERROR' })
+  })
 })
 
 describe('subscribeToRoom', () => {
