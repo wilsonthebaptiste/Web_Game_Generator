@@ -83,9 +83,9 @@ Your PRs here unblock everyone. Aim to merge `chore/scaffold` on day one.
 ## Phase 3 — Round Loop and Trusted Scoring
 
 **Branch `feat/reveal-scoring`** (merge first, because B is waiting):
-- [ ] `reveal_round(round_id)`: host only. `select … for update` on the round, `ROUND_ALREADY_REVEALED` if it isn't `answering`. Score the answers per `plan.md` §1.5 using `round_secrets`. Set `answers.points_awarded`, increment `players.score`, write `reveal_snapshot` (correct answer, every player's answer or null, points), set `status = 'revealed'` and `revealed_at`. All in one transaction.
-- [ ] `end_game(room_id)`: host only. Sets `status = 'finished'`.
-- [ ] `tests/integration/scoring.parity.test.ts`: loads B's `scoring.fixtures.json`, creates rooms, players, and answers in local Supabase, calls `reveal_round`, and checks the points. Also covers double reveal, non-host reveal, and answers submitted after the reveal.
+- [x] `reveal_round(round_id)`: host only. `select … for update` on the round, `ROUND_ALREADY_REVEALED` if it isn't `answering`. Score the answers per `plan.md` §1.5 using `round_secrets`. Set `answers.points_awarded`, increment `players.score`, write `reveal_snapshot` (correct answer, every player's answer or null, points), set `status = 'revealed'` and `revealed_at`. All in one transaction.
+- [x] `end_game(room_id)`: host only. Sets `status = 'finished'`.
+- [x] `tests/integration/scoring.parity.test.ts`: loads B's `scoring.fixtures.json`, creates rooms, players, and answers in local Supabase, calls `reveal_round`, and checks the points. Also covers double reveal, non-host reveal, and answers submitted after the reveal.
 
 **Branch `feat/scoreboard`** (merge before B's `feat/game-flow`):
 - [ ] `winners.ts`: `computeWinners(players) → Player[]` (all players tied for the top score; an empty list if there are no players).
