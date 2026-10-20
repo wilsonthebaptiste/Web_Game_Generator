@@ -26,6 +26,40 @@ decisions, answers to A and B, and open items.
 
 ---
 
+## Phase 4 — Reconnect (`feat/reconnect`)
+
+### What was built
+
+| File | Purpose |
+|---|---|
+| `src/app/useRoomSession.ts` | Refetch on channel error/timeout/re-subscribe, `online`, and tab visible; real `session.connection` |
+| `src/app/RoomPage.tsx` | `ConnectionBanner` above every room view while offline or reconnecting |
+| `src/app/theme.css` | `.app-banner` (sticky, text plus a warning border, not colour alone) |
+| `src/app/useRoomSession.test.tsx` | 14 new tests for the reconnect signals, connection states, and the banner |
+
+### Decisions
+
+- **Connection is derived from two facts:** `navigator.onLine` and whether the rounds channel is
+  subscribed. Offline wins; otherwise a channel that errored, timed out, or closed unexpectedly
+  means `reconnecting` until realtime-js re-subscribes. It starts optimistic (`connected`), so
+  the banner never flashes on first load.
+- **The rounds channel is the signal.** `subscribeToRoom` (A) already refetches on every
+  `SUBSCRIBED`, and both channels share one socket, so one status listener is enough. No change
+  to A's code.
+- **Refetch on channel error too,** as plan.md asks: realtime can be down while HTTP still
+  works, so the snapshot catches up even before realtime returns.
+- **Checked against real realtime on `dev`:** closing the socket uncleanly (like a network drop)
+  gave `SUBSCRIBED` → `CHANNEL_ERROR` (30 ms) → `SUBSCRIBED` again after about 1.2 s, so the
+  banner shows "Reconnecting…" for about a second and the snapshot is refetched on return.
+  `removeChannel` then reports `CLOSED`, which the hook ignores after unmount.
+- **No polling while reconnecting.** realtime-js retries on its own and the re-subscribe
+  triggers a refetch. If the gate or real use shows long stale periods, a slow poll is easy to
+  add here.
+- **Expired or finished on reconnect** needed no new screens: the refetch returns `ROOM_EXPIRED`
+  (RoomPage's message and link home) or a finished room (`FinalScreen`). Both are tested.
+
+---
+
 ## Phase 4 — Final screen (`feat/final-screen`)
 
 ### What was built

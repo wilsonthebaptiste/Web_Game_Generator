@@ -95,6 +95,20 @@ a {
   padding: var(--space-5) var(--space-4);
 }
 
+/* Connection banner above room views (RoomPage). Sticks to the top so it stays visible. */
+.app-banner {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  margin: 0;
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 3px solid var(--color-warning);
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+  font-weight: 600;
+  text-align: center;
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;
