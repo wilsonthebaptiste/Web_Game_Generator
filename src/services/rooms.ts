@@ -6,13 +6,10 @@ import { ensureAnonymousSession, getSupabase } from '../lib/supabaseClient'
 import type { Database } from '../types/database'
 import type { CreateRoomInput, RoomMembership, RoomSnapshot } from '../types/game'
 
-type GeneratedFunctions = Database['public']['Functions']
-
-// `end_game` ships in C's `feat/reveal-scoring`. Until the generated types include it, its
-// signature comes from plan.md §1.2. Once they do, this entry can be dropped.
-type RoomRpcs = Pick<GeneratedFunctions, 'create_room' | 'join_room' | 'get_room_snapshot'> & {
-  end_game: { Args: { room_id: string }; Returns: undefined }
-}
+type RoomRpcs = Pick<
+  Database['public']['Functions'],
+  'create_room' | 'join_room' | 'get_room_snapshot' | 'end_game'
+>
 
 /**
  * Calls a room RPC as this browser's anonymous user. Every failure, including sign-in and
@@ -25,11 +22,7 @@ export async function callRoomRpc<Fn extends keyof RoomRpcs>(
 ): Promise<unknown> {
   try {
     await ensureAnonymousSession()
-    // The cast only widens the name for `end_game` (see RoomRpcs); args are checked above.
-    const { data, error, status } = await getSupabase().rpc(
-      fn as keyof GeneratedFunctions,
-      args as never,
-    )
+    const { data, error, status } = await getSupabase().rpc(fn, args)
     if (error) throw toAppError(error, status)
     return data
   } catch (error) {
