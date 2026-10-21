@@ -53,6 +53,46 @@
   text-transform: uppercase;
 }
 
+/* Offline notice. Warning border plus text, not colour alone (same look as RoomPage's banner). */
+.home-offline {
+  margin: 0 0 var(--space-5);
+  padding: var(--space-3) var(--space-4);
+  border-left: 4px solid var(--color-warning);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-muted);
+  font-weight: 600;
+}
+
+/* Kept in the page while empty so the live region is in place before the network drops. */
+.home-offline:empty {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+/* Replaces the join form when the room can't be joined (ended, expired, already started). */
+.home-dead-end {
+  padding: var(--space-4);
+  border: 2px solid var(--color-border);
+  border-left: 6px solid var(--color-warning);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-muted);
+}
+
+.home-dead-end__title {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-lg);
+}
+
+.home-dead-end__text {
+  margin: 0 0 var(--space-4);
+}
+
+/* The link is styled as a button; drop the underline that links get by default. */
+.home-dead-end .ui-button {
+  text-decoration: none;
+}
+
 @media (max-width: 400px) {
   .home-card {
     padding: var(--space-4);

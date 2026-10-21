@@ -174,26 +174,54 @@ describe('subscribeToRoom', () => {
     expect(channel.subscribe).toHaveBeenCalledOnce()
   })
 
+  /** The handler registered with `channel.on(type, ...)`; one per type except postgres_changes. */
+  const handlersFor = (type: string) =>
+    channel.on.mock.calls
+      .filter((call) => call[0] === type)
+      .map((call) => call[2] as (payload: unknown) => void)
+
   it('calls onChange for every change event', () => {
     const onChange = vi.fn()
     subscribeToRoom('room-1', onChange)
 
-    const handlers = channel.on.mock.calls.map((call) => call[2] as (payload: unknown) => void)
+    const handlers = handlersFor('postgres_changes')
+    expect(handlers).toHaveLength(2)
     handlers.forEach((handler) => handler({ eventType: 'UPDATE' }))
     expect(onChange).toHaveBeenCalledTimes(2)
   })
 
-  it('calls onChange when the channel (re)connects, but not on other statuses', () => {
+  it('calls onChange once the server confirms database changes are flowing', () => {
     const onChange = vi.fn()
     subscribeToRoom('room-1', onChange)
-    const onStatus = channel.subscribe.mock.calls[0][0] as (status: string) => void
+    const [onSystem] = handlersFor('system')
 
-    onStatus('CHANNEL_ERROR')
-    onStatus('TIMED_OUT')
-    expect(onChange).not.toHaveBeenCalled()
-
-    onStatus('SUBSCRIBED')
+    onSystem({ extension: 'postgres_changes', status: 'ok', message: 'Subscribed to PostgreSQL' })
     expect(onChange).toHaveBeenCalledOnce()
+
+    // Again after a reconnect: the server confirms each new subscription.
+    onSystem({ extension: 'postgres_changes', status: 'ok', message: 'Subscribed to PostgreSQL' })
+    expect(onChange).toHaveBeenCalledTimes(2)
+  })
+
+  it('ignores other system messages', () => {
+    const onChange = vi.fn()
+    subscribeToRoom('room-1', onChange)
+    const [onSystem] = handlersFor('system')
+
+    onSystem({ extension: 'postgres_changes', status: 'error', message: 'failed' })
+    onSystem({ extension: 'presence', status: 'ok' })
+    onSystem({})
+    expect(onChange).not.toHaveBeenCalled()
+  })
+
+  it('does not refetch on SUBSCRIBED, before changes start flowing', () => {
+    const onChange = vi.fn()
+    subscribeToRoom('room-1', onChange)
+    const onStatus = channel.subscribe.mock.calls[0][0] as ((status: string) => void) | undefined
+
+    onStatus?.('SUBSCRIBED')
+    onStatus?.('CHANNEL_ERROR')
+    expect(onChange).not.toHaveBeenCalled()
   })
 
   it('uses a separate channel topic for each subscription', () => {

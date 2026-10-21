@@ -49,8 +49,10 @@ let subscriptionCount = 0
 /**
  * Subscribes to realtime changes on this room's `rooms` and `players` rows.
  * `onChange` is only a notification; the caller refetches the snapshot.
- * `onChange` also fires each time the channel (re)connects, so changes made while it was
- * connecting or offline are never missed.
+ * `onChange` also fires each time the server confirms it is sending this channel's database
+ * changes, after every (re)connect, so changes made while connecting or offline are never
+ * missed. That confirmation is a `system` message ~120 ms after `SUBSCRIBED`; changes in
+ * between are never delivered, so refetching on `SUBSCRIBED` would be too early.
  * Returns an unsubscribe function.
  */
 export function subscribeToRoom(roomId: string, onChange: () => void): () => void {
@@ -68,9 +70,10 @@ export function subscribeToRoom(roomId: string, onChange: () => void): () => voi
       { event: '*', schema: 'public', table: 'players', filter: `room_id=eq.${roomId}` },
       () => onChange(),
     )
-    .subscribe((status) => {
-      if (status === 'SUBSCRIBED') onChange()
+    .on('system', {}, (payload: { extension?: string; status?: string }) => {
+      if (payload.extension === 'postgres_changes' && payload.status === 'ok') onChange()
     })
+    .subscribe()
 
   let active = true
   return () => {

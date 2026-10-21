@@ -251,6 +251,58 @@ describe('start game', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
+  it('is disabled while offline, with the reason as text', () => {
+    renderLobby({ ...withMode(lobbyHost), connection: 'offline' })
+
+    expect(startButton()).toBeDisabled()
+    expect(startButton()).toHaveAccessibleDescription(
+      'You’re offline. Reconnect to start the game.',
+    )
+  })
+
+  it('stays enabled while realtime is only reconnecting, since the RPC uses HTTP', () => {
+    renderLobby({ ...withMode(lobbyHost), connection: 'reconnecting' })
+
+    expect(startButton()).toBeEnabled()
+  })
+
+  it('re-enables once the browser is back online', () => {
+    const offline = { ...withMode(lobbyHost), connection: 'offline' as const }
+    const { rerender } = render(<LobbyPage session={offline} />)
+    expect(startButton()).toBeDisabled()
+
+    rerender(<LobbyPage session={{ ...offline, connection: 'connected' }} />)
+
+    expect(startButton()).toBeEnabled()
+  })
+
+  it.each<[AppErrorCode, RegExp]>([
+    ['ROOM_EXPIRED', /This room has expired/],
+    ['ROOM_FINISHED', /This game has ended/],
+    ['ROUND_IN_PROGRESS', /Reveal the current round/],
+  ])('refreshes the room after %s, so the page can catch up', async (code, message) => {
+    startRound.mockRejectedValueOnce(createAppError(code))
+    const session = withRefresh(withMode(lobbyHost))
+    const { user } = renderLobby(session)
+
+    await user.click(startButton())
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(message)
+    expect(session.refresh).toHaveBeenCalledOnce()
+  })
+
+  it('does not refresh after a network error, which a refetch would only repeat', async () => {
+    startRound.mockRejectedValueOnce(createAppError('NETWORK_ERROR'))
+    const session = withRefresh(withMode(lobbyHost))
+    const { user } = renderLobby(session)
+
+    await user.click(startButton())
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/offline or the connection dropped/)
+    expect(session.refresh).not.toHaveBeenCalled()
+    expect(startButton()).toBeEnabled()
+  })
+
   it('never shows a raw error message', async () => {
     startRound.mockRejectedValueOnce(new Error('relation "rounds" does not exist'))
     const { user } = renderLobby(withRefresh(withMode(lobbyHost)))
