@@ -495,3 +495,111 @@ describe('/join/:code prefill', () => {
     expect(document.body).toHaveFocus()
   })
 })
+
+describe('keyboard and labels', () => {
+  it('tabs through both forms in reading order', async () => {
+    const { user } = renderAt('/')
+    const order = [
+      within(createForm()).getByLabelText('Your name'),
+      within(createForm()).getByRole('button', { name: 'Create room' }),
+      within(joinForm()).getByLabelText('Room code'),
+      within(joinForm()).getByLabelText('Your name'),
+      within(joinForm()).getByRole('button', { name: 'Join room' }),
+    ]
+
+    for (const element of order) {
+      await user.tab()
+      expect(element).toHaveFocus()
+    }
+  })
+
+  it('puts the join form first in the tab order on a shared link', async () => {
+    const { user } = renderAt('/join/ABCDE')
+    // The name field starts focused; Shift+Tab goes back to the code, which comes first.
+    await user.tab({ shift: true })
+
+    expect(within(joinForm()).getByLabelText('Room code')).toHaveFocus()
+  })
+
+  it('creates a room using only the keyboard', async () => {
+    createRoom.mockResolvedValue(hostMembership)
+    const { user } = renderAt('/')
+
+    await user.tab()
+    await user.keyboard('Ava{Enter}')
+
+    expect(createRoom).toHaveBeenCalledWith({ displayName: 'Ava' })
+    expect(await screen.findByRole('heading', { name: `Room page ${ROOM}` })).toBeVisible()
+  })
+
+  it('describes each field with its hint', () => {
+    renderAt('/')
+
+    expect(within(createForm()).getByLabelText('Your name')).toHaveAccessibleDescription(
+      '1–20 characters. Other players will see it.',
+    )
+    expect(within(joinForm()).getByLabelText('Room code')).toHaveAccessibleDescription(
+      '5 letters and numbers, like K7M2Q.',
+    )
+  })
+
+  it('adds the error to the field’s description, so it is read with the field', async () => {
+    const { user } = renderAt('/')
+
+    await user.click(within(joinForm()).getByRole('button', { name: 'Join room' }))
+
+    expect(within(joinForm()).getByLabelText('Room code')).toHaveAccessibleDescription(
+      '5 letters and numbers, like K7M2Q. Enter a room code.',
+    )
+  })
+
+  it('uses visible labels, not placeholder text', () => {
+    renderAt('/')
+
+    for (const input of screen.getAllByRole('textbox')) {
+      expect(input).not.toHaveAttribute('placeholder')
+      expect(input.id).not.toBe('')
+      expect(document.querySelector(`label[for="${input.id}"]`)).toBeVisible()
+    }
+  })
+})
+
+describe('form errors', () => {
+  it('clears a form-level error when the form is submitted again', async () => {
+    const request = deferred<RoomMembership>()
+    createRoom
+      .mockRejectedValueOnce(createAppError('NETWORK_ERROR'))
+      .mockReturnValueOnce(request.promise)
+    const { user } = renderAt('/')
+    await user.type(within(createForm()).getByLabelText('Your name'), 'Ava')
+    await user.click(within(createForm()).getByRole('button', { name: 'Create room' }))
+    expect(await within(createForm()).findByRole('alert')).toBeVisible()
+
+    await user.click(within(createForm()).getByRole('button', { name: 'Create room' }))
+
+    // While the retry is in flight, the old error is already gone.
+    expect(within(createForm()).queryByRole('alert')).not.toBeInTheDocument()
+    await act(async () => request.resolve(hostMembership))
+  })
+
+  it('keeps errors in one form from showing in the other', async () => {
+    joinRoom.mockRejectedValue(createAppError('RATE_LIMITED'))
+    const { user } = renderAt('/join/ABCDE')
+    await user.type(within(joinForm()).getByLabelText('Your name'), 'Ben')
+    await user.click(within(joinForm()).getByRole('button', { name: 'Join room' }))
+
+    expect(await within(joinForm()).findByRole('alert')).toHaveTextContent('Too many attempts.')
+    expect(within(createForm()).queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('keeps the typed name after a server error, so the player can just retry', async () => {
+    joinRoom.mockRejectedValue(createAppError('NETWORK_ERROR'))
+    const { user } = renderAt('/join/ABCDE')
+    await user.type(within(joinForm()).getByLabelText('Your name'), 'Ben')
+    await user.click(within(joinForm()).getByRole('button', { name: 'Join room' }))
+    await within(joinForm()).findByRole('alert')
+
+    expect(within(joinForm()).getByLabelText('Your name')).toHaveValue('Ben')
+    expect(within(joinForm()).getByLabelText('Room code')).toHaveValue('ABCDE')
+  })
+})
