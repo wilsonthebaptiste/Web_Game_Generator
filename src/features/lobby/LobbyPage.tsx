@@ -3,9 +3,26 @@ import { Button } from '../../components/Button'
 import { ErrorMessage } from '../../components/ErrorMessage'
 import { ERROR_MESSAGES, toAppError } from '../../lib/errors'
 import { startRound } from '../../services/rounds'
-import { GAME_LIMITS, type GameMode, type Player, type RoomSession } from '../../types/game'
+import {
+  GAME_LIMITS,
+  type AppErrorCode,
+  type GameMode,
+  type Player,
+  type RoomSession,
+} from '../../types/game'
 import { ModePicker } from '../game/ModePicker'
 import './lobby.css'
+
+/**
+ * Start failures that mean the room changed under the host (it expired, ended, or a round was
+ * started from another tab). Refetching lets RoomPage switch to the right screen.
+ */
+const STALE_ROOM_ERRORS: readonly AppErrorCode[] = [
+  'ROOM_EXPIRED',
+  'ROOM_FINISHED',
+  'ROUND_IN_PROGRESS',
+  'NOT_A_MEMBER',
+]
 
 export interface LobbyPageProps {
   session: RoomSession
@@ -71,11 +88,13 @@ function HostControls({ session }: { session: RoomSession }) {
   const inFlight = useRef(false)
 
   const blockedReason =
-    players.length < GAME_LIMITS.minPlayersToStart
-      ? ERROR_MESSAGES.NOT_ENOUGH_PLAYERS
-      : mode === null
-        ? 'Choose a game mode to start.'
-        : null
+    session.connection === 'offline'
+      ? 'You’re offline. Reconnect to start the game.'
+      : players.length < GAME_LIMITS.minPlayersToStart
+        ? ERROR_MESSAGES.NOT_ENOUGH_PLAYERS
+        : mode === null
+          ? 'Choose a game mode to start.'
+          : null
 
   async function start() {
     if (inFlight.current || blockedReason !== null || mode === null) return
@@ -87,7 +106,9 @@ function HostControls({ session }: { session: RoomSession }) {
     } catch (err) {
       inFlight.current = false
       setStarting(false)
-      setError(toAppError(err).message)
+      const appError = toAppError(err)
+      setError(appError.message)
+      if (STALE_ROOM_ERRORS.includes(appError.code)) void session.refresh()
       return
     }
     // The room is now `playing`. Stay disabled; RoomPage swaps in the game view once the

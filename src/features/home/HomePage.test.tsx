@@ -246,7 +246,7 @@ describe('Join room form', () => {
     expect(button).toBeDisabled()
     expect(button).toHaveTextContent('Joining room…')
 
-    await act(async () => request.reject(createAppError('ROOM_EXPIRED')))
+    await act(async () => request.reject(createAppError('NETWORK_ERROR')))
     expect(button).toBeEnabled()
   })
 
@@ -264,24 +264,184 @@ describe('Join room form', () => {
 
     expect(await within(joinForm()).findByRole('alert')).toHaveTextContent(message)
     expect(within(joinForm()).getByLabelText(field)).toHaveAttribute('aria-invalid', 'true')
+    expect(within(joinForm()).getByLabelText(field)).toHaveFocus()
   })
 
   it.each<[AppErrorCode, string]>([
-    ['ROOM_EXPIRED', 'This room has expired.'],
-    ['ROOM_FINISHED', 'This game has ended.'],
-    ['ROOM_NOT_JOINABLE', 'This game has already started'],
     ['RATE_LIMITED', 'Too many attempts.'],
     ['NETWORK_ERROR', "You're offline or the connection dropped."],
-  ])('shows %s as a form error', async (code, message) => {
-    joinRoom.mockRejectedValue(createAppError(code))
+    ['SERVICE_UNAVAILABLE', 'The game server is busy or unavailable.'],
+  ])('shows %s as a form error and allows a retry', async (code, message) => {
+    joinRoom.mockRejectedValueOnce(createAppError(code)).mockResolvedValueOnce(guestMembership)
     const { user } = renderAt('/join/ABCDE')
     await user.type(within(joinForm()).getByLabelText('Your name'), 'Ben')
+    const button = within(joinForm()).getByRole('button', { name: 'Join room' })
 
-    await user.click(within(joinForm()).getByRole('button', { name: 'Join room' }))
+    await user.click(button)
 
     const alert = await within(joinForm()).findByRole('alert')
     expect(alert).toHaveTextContent('Couldn’t join the room')
     expect(alert).toHaveTextContent(message)
+    expect(button).toBeEnabled()
+
+    await user.click(button)
+    expect(await screen.findByRole('heading', { name: `Room page ${ROOM}` })).toBeVisible()
+  })
+})
+
+describe('Rooms that can’t be joined', () => {
+  const notice = () => screen.getByRole('group', { name: /has ended|has expired|already started/ })
+
+  async function joinAndFail(code: AppErrorCode, path = '/join/ABCDE') {
+    joinRoom.mockRejectedValue(createAppError(code))
+    const result = renderAt(path)
+    if (path === '/') {
+      await result.user.type(screen.getByLabelText('Room code'), 'ABCDE')
+    }
+    await result.user.type(within(joinForm()).getByLabelText('Your name'), 'Ben')
+    await result.user.click(within(joinForm()).getByRole('button', { name: 'Join room' }))
+    return result
+  }
+
+  it.each<[AppErrorCode, string, RegExp]>([
+    ['ROOM_FINISHED', 'This game has ended', /can’t join a finished game/],
+    ['ROOM_EXPIRED', 'This room has expired', /no longer open/],
+    ['ROOM_NOT_JOINABLE', 'This game has already started', /can’t join a game in progress/],
+  ])('replaces the join form for %s with an explanation', async (code, title, text) => {
+    await joinAndFail(code)
+
+    const group = await screen.findByRole('group', { name: title })
+    expect(group).toHaveAccessibleDescription(text)
+    expect(within(group).getByRole('heading', { name: title })).toBeVisible()
+    // The form is gone, so the player can't keep retrying a code that can't work.
+    expect(screen.queryByRole('form', { name: 'Join a room' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Join room' })).not.toBeInTheDocument()
+    // The create form is still there for starting a new game.
+    expect(createForm()).toBeVisible()
+  })
+
+  it('shows "This game has ended" and a link home for a finished room opened from a link', async () => {
+    const { router, user } = await joinAndFail('ROOM_FINISHED')
+
+    expect(await screen.findByRole('heading', { name: 'This game has ended' })).toBeVisible()
+    const home = screen.getByRole('link', { name: 'Go to the home page' })
+    expect(home).toHaveAttribute('href', '/')
+
+    await user.click(home)
+
+    expect(router.state.location.pathname).toBe('/')
+    expect(joinForm()).toBeVisible()
+    expect(within(joinForm()).getByLabelText('Room code')).toHaveValue('')
+  })
+
+  it('moves focus to the explanation, since the focused button is gone', async () => {
+    await joinAndFail('ROOM_FINISHED')
+
+    expect(await screen.findByRole('group', { name: 'This game has ended' })).toHaveFocus()
+  })
+
+  it('starts over with an empty, focused code field on the plain home page', async () => {
+    const { user } = await joinAndFail('ROOM_EXPIRED', '/')
+    await screen.findByRole('group', { name: 'This room has expired' })
+
+    await user.click(screen.getByRole('link', { name: 'Go to the home page' }))
+
+    expect(screen.queryByRole('group', { name: 'This room has expired' })).not.toBeInTheDocument()
+    expect(within(joinForm()).getByLabelText('Room code')).toHaveValue('')
+    expect(within(joinForm()).getByLabelText('Room code')).toHaveFocus()
+  })
+
+  it('is reachable from the keyboard', async () => {
+    const { user } = await joinAndFail('ROOM_FINISHED')
+    await screen.findByRole('group', { name: 'This game has ended' })
+
+    await user.tab()
+
+    expect(screen.getByRole('link', { name: 'Go to the home page' })).toHaveFocus()
+    expect(notice()).toBeVisible()
+  })
+})
+
+describe('focus after a validation error', () => {
+  it('moves focus to the name field when the create form is blocked', async () => {
+    const { user } = renderAt('/')
+
+    await user.click(within(createForm()).getByRole('button', { name: 'Create room' }))
+
+    expect(within(createForm()).getByLabelText('Your name')).toHaveFocus()
+  })
+
+  it('moves focus to the code field first when both join fields are wrong', async () => {
+    const { user } = renderAt('/')
+
+    await user.click(within(joinForm()).getByRole('button', { name: 'Join room' }))
+
+    expect(within(joinForm()).getByLabelText('Room code')).toHaveFocus()
+  })
+
+  it('moves focus to the name field when only the name is wrong', async () => {
+    const { user } = renderAt('/join/ABCDE')
+
+    await user.click(within(joinForm()).getByRole('button', { name: 'Join room' }))
+
+    expect(within(joinForm()).getByLabelText('Your name')).toHaveFocus()
+  })
+
+  it('moves focus to the name field for a server name error on create', async () => {
+    createRoom.mockRejectedValue(createAppError('NAME_INVALID'))
+    const { user } = renderAt('/')
+    await user.type(within(createForm()).getByLabelText('Your name'), 'Ava')
+    await user.click(within(createForm()).getByRole('button', { name: 'Create room' }))
+
+    await within(createForm()).findByRole('alert')
+    expect(within(createForm()).getByLabelText('Your name')).toHaveFocus()
+  })
+})
+
+describe('offline notice', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  const goOffline = () => {
+    vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
+    window.dispatchEvent(new Event('offline'))
+  }
+  const goOnline = () => {
+    vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(true)
+    window.dispatchEvent(new Event('online'))
+  }
+  const offlineText = /You’re offline\. Creating or joining a room needs a connection\./
+
+  it('says nothing while online', () => {
+    renderAt('/')
+
+    expect(screen.queryByText(offlineText)).not.toBeInTheDocument()
+  })
+
+  it('appears when the network drops and goes when it returns', () => {
+    renderAt('/')
+
+    act(goOffline)
+    expect(screen.getByRole('status')).toHaveTextContent(offlineText)
+
+    act(goOnline)
+    expect(screen.queryByText(offlineText)).not.toBeInTheDocument()
+  })
+
+  it('shows on first load when already offline', () => {
+    vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
+    renderAt('/')
+
+    expect(screen.getByText(offlineText)).toBeVisible()
+  })
+
+  it('keeps the forms usable, so a player can try once the network is back', () => {
+    vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
+    renderAt('/')
+
+    expect(within(createForm()).getByRole('button', { name: 'Create room' })).toBeEnabled()
+    expect(within(joinForm()).getByRole('button', { name: 'Join room' })).toBeEnabled()
   })
 })
 

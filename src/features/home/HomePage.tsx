@@ -1,5 +1,13 @@
-import { useId, useRef, useState, type FormEvent } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type FormEvent,
+  type RefObject,
+} from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Button } from '../../components/Button'
 import { ErrorMessage } from '../../components/ErrorMessage'
 import { Input } from '../../components/Input'
@@ -15,6 +23,52 @@ import './home.css'
 const NAME_ERRORS: readonly AppErrorCode[] = ['NAME_INVALID', 'NAME_TAKEN']
 const CODE_ERRORS: readonly AppErrorCode[] = ['INVALID_ROOM_CODE', 'ROOM_NOT_FOUND']
 
+/**
+ * Join errors where this code can never work for this browser. The join form is replaced by an
+ * explanation and a link home, instead of an error next to a form that would only fail again.
+ * (A browser that already joined never sees these: `join_room` lets it back in.)
+ */
+const DEAD_END_ERRORS = {
+  ROOM_FINISHED: {
+    title: 'This game has ended',
+    text: 'New players can’t join a finished game. Ask the host for a new room code, or create a room of your own.',
+  },
+  ROOM_EXPIRED: {
+    title: 'This room has expired',
+    text: 'This room is no longer open. Ask the host for a new room code, or create a room of your own.',
+  },
+  ROOM_NOT_JOINABLE: {
+    title: 'This game has already started',
+    text: 'New players can’t join a game in progress. Ask the host for a new room code, or create a room of your own.',
+  },
+} as const satisfies Partial<Record<AppErrorCode, { title: string; text: string }>>
+
+type DeadEndCode = keyof typeof DEAD_END_ERRORS
+
+function isDeadEnd(code: AppErrorCode): code is DeadEndCode {
+  return code in DEAD_END_ERRORS
+}
+
+function subscribeToOnline(onChange: () => void) {
+  window.addEventListener('online', onChange)
+  window.addEventListener('offline', onChange)
+  return () => {
+    window.removeEventListener('online', onChange)
+    window.removeEventListener('offline', onChange)
+  }
+}
+
+/** `navigator.onLine`, kept current. Room pages have their own banner (RoomPage). */
+function useIsOnline() {
+  return useSyncExternalStore(subscribeToOnline, () => navigator.onLine)
+}
+
+/** Moves keyboard focus to a form field by its `name`, so the player lands on what to fix. */
+function focusField(form: RefObject<HTMLFormElement | null>, name: string) {
+  const field = form.current?.elements.namedItem(name)
+  if (field instanceof HTMLInputElement) field.focus()
+}
+
 /** Rendered for `/` and `/join/:code` (code prefilled). */
 export function HomePage() {
   const { code } = useParams<{ code?: string }>()
@@ -24,6 +78,7 @@ export function HomePage() {
 
 function HomeContent({ prefilledCode }: { prefilledCode: string }) {
   const navigate = useNavigate()
+  const online = useIsOnline()
   const goToRoom = ({ room }: RoomMembership) => navigate(`/room/${room.code}`)
 
   const createForm = (
@@ -45,6 +100,10 @@ function HomeContent({ prefilledCode }: { prefilledCode: string }) {
           </p>
         )}
       </header>
+      {/* Always rendered, so screen readers announce the change when the network drops. */}
+      <p className="home-offline" role="status">
+        {!online && 'You’re offline. Creating or joining a room needs a connection.'}
+      </p>
       <div className="home-forms">
         {/* A shared join link puts the join form first. */}
         {prefilledCode ? [joinForm, createForm] : [createForm, joinForm]}
@@ -87,6 +146,7 @@ function CreateRoomForm({ onCreated, secondary }: CreateRoomFormProps) {
   const [nameError, setNameError] = useState<string | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
   const { pending, run } = useSubmit()
+  const formRef = useRef<HTMLFormElement>(null)
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -95,6 +155,7 @@ function CreateRoomForm({ onCreated, secondary }: CreateRoomFormProps) {
     const validName = validateDisplayName(name)
     if (!validName.ok) {
       setNameError(validName.message)
+      focusField(formRef, 'displayName')
       return
     }
     setNameError(null)
@@ -104,8 +165,12 @@ function CreateRoomForm({ onCreated, secondary }: CreateRoomFormProps) {
         onCreated(await createRoom({ displayName: validName.value }))
       } catch (error) {
         const appError = toAppError(error)
-        if (NAME_ERRORS.includes(appError.code)) setNameError(appError.message)
-        else setFormError(appError.message)
+        if (NAME_ERRORS.includes(appError.code)) {
+          setNameError(appError.message)
+          focusField(formRef, 'displayName')
+        } else {
+          setFormError(appError.message)
+        }
       }
     })
   }
@@ -114,7 +179,7 @@ function CreateRoomForm({ onCreated, secondary }: CreateRoomFormProps) {
     <section className="home-card" aria-labelledby={headingId}>
       <h2 id={headingId}>Create a room</h2>
       <p className="home-card__text">You’ll be the host and get a code to share.</p>
-      <form aria-labelledby={headingId} onSubmit={handleSubmit} noValidate>
+      <form ref={formRef} aria-labelledby={headingId} onSubmit={handleSubmit} noValidate>
         <Input
           label="Your name"
           hint="1–20 characters. Other players will see it."
@@ -154,7 +219,9 @@ function JoinRoomForm({ prefilledCode, onJoined }: JoinRoomFormProps) {
   const [codeError, setCodeError] = useState<string | null>(null)
   const [nameError, setNameError] = useState<string | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
+  const [deadEnd, setDeadEnd] = useState<DeadEndCode | null>(null)
   const { pending, run } = useSubmit()
+  const formRef = useRef<HTMLFormElement>(null)
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -164,25 +231,62 @@ function JoinRoomForm({ prefilledCode, onJoined }: JoinRoomFormProps) {
     const validName = validateDisplayName(name)
     setCodeError(validCode.ok ? null : validCode.message)
     setNameError(validName.ok ? null : validName.message)
-    if (!validCode.ok || !validName.ok) return
+    if (!validCode.ok || !validName.ok) {
+      focusField(formRef, validCode.ok ? 'displayName' : 'roomCode')
+      return
+    }
 
     void run(async () => {
       try {
         onJoined(await joinRoom({ roomCode: validCode.value, displayName: validName.value }))
       } catch (error) {
         const appError = toAppError(error)
-        if (CODE_ERRORS.includes(appError.code)) setCodeError(appError.message)
-        else if (NAME_ERRORS.includes(appError.code)) setNameError(appError.message)
-        else setFormError(appError.message)
+        if (isDeadEnd(appError.code)) {
+          setDeadEnd(appError.code)
+        } else if (CODE_ERRORS.includes(appError.code)) {
+          setCodeError(appError.message)
+          focusField(formRef, 'roomCode')
+        } else if (NAME_ERRORS.includes(appError.code)) {
+          setNameError(appError.message)
+          focusField(formRef, 'displayName')
+        } else {
+          setFormError(appError.message)
+        }
       }
     })
+  }
+
+  // After "start over", put the player straight into the emptied code field.
+  const focusCodeOnReturn = useRef(false)
+  useEffect(() => {
+    if (deadEnd === null && focusCodeOnReturn.current) {
+      focusCodeOnReturn.current = false
+      focusField(formRef, 'roomCode')
+    }
+  }, [deadEnd])
+
+  /** Back to an empty join form. On `/join/:code` the link also navigates home. */
+  function startOver() {
+    focusCodeOnReturn.current = true
+    setDeadEnd(null)
+    setCode('')
+    setCodeError(null)
+  }
+
+  if (deadEnd) {
+    return (
+      <section className="home-card" aria-labelledby={headingId}>
+        <h2 id={headingId}>Join a room</h2>
+        <DeadEndNotice code={deadEnd} onStartOver={startOver} />
+      </section>
+    )
   }
 
   return (
     <section className="home-card" aria-labelledby={headingId}>
       <h2 id={headingId}>Join a room</h2>
       <p className="home-card__text">Enter the code the host shared with you.</p>
-      <form aria-labelledby={headingId} onSubmit={handleSubmit} noValidate>
+      <form ref={formRef} aria-labelledby={headingId} onSubmit={handleSubmit} noValidate>
         <Input
           label="Room code"
           hint="5 letters and numbers, like K7M2Q."
@@ -218,5 +322,44 @@ function JoinRoomForm({ prefilledCode, onJoined }: JoinRoomFormProps) {
         </Button>
       </form>
     </section>
+  )
+}
+
+interface DeadEndNoticeProps {
+  code: DeadEndCode
+  onStartOver: () => void
+}
+
+/**
+ * Replaces the join form when the room can't be joined. Takes focus when it appears, because
+ * the button that had focus is gone; its heading and text are read out together.
+ */
+function DeadEndNotice({ code, onStartOver }: DeadEndNoticeProps) {
+  const titleId = useId()
+  const textId = useId()
+  const ref = useRef<HTMLDivElement>(null)
+  const { title, text } = DEAD_END_ERRORS[code]
+
+  useEffect(() => ref.current?.focus(), [])
+
+  return (
+    <div
+      ref={ref}
+      className="home-dead-end"
+      role="group"
+      aria-labelledby={titleId}
+      aria-describedby={textId}
+      tabIndex={-1}
+    >
+      <h3 id={titleId} className="home-dead-end__title">
+        {title}
+      </h3>
+      <p id={textId} className="home-dead-end__text">
+        {text}
+      </p>
+      <Link to="/" className="ui-button ui-button--secondary ui-button--full" onClick={onStartOver}>
+        Go to the home page
+      </Link>
+    </div>
   )
 }
