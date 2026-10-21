@@ -5,6 +5,98 @@ Findings from Contributor A (Wilson, Room and Lobby) while working through
 
 ---
 
+## Phase 4 — End Game, Resilience, and Hardening
+
+**Branches:** `fix/home-lobby-polish`, then `test/lobby-ui` stacked on it.
+**Checks:** `npm run lint`, `npm run typecheck`, `npm run format:check`, `npm test` (573 tests, 52
+of them new) and `npm run build` all pass.
+**Status: code complete.** The manual Room and Lobby check passed in Edge with emulated phones and
+a desktop window. A run on a real phone is still to do.
+
+### Browser check on `dev` (2026-10-20)
+
+`playwright-core` drove Edge against `npm run dev`, with five browser contexts (five anonymous
+players): Ava on a 360px phone, Ben on desktop, Cleo on a 375px phone, a 360px outsider, and a
+desktop keyboard-only player. Room `79ASB`; 33/33 checks passed. Two checks failed on the first
+run because of races in the script: it pressed Tab before the page had rendered, and one
+selector matched both name fields. Both passed when rerun with those fixed.
+
+| Checklist step | Result |
+|---|---|
+| R1–R9 (create, unique codes, copy link, join by link and by lower-case code, live lobby, host vs guest) | Pass |
+| RX1–RX8 (empty and long names, `AB`, `ZZZZZ`, duplicate name, `/room/ZZZZZ`, non-member redirect, 404) | Pass |
+| RH1 (lone host: Start disabled with the reason) | Pass |
+| E7 (join mid-game) | Pass: the "This game has already started" panel replaces the form |
+| E5 (non-member opens a finished room's link) | Pass: redirected to `/join/<code>`, then "This game has ended", focused, with a link home that leads to an empty form |
+| M1 (360px, no sideways scroll) | Pass on home, lobby, and the finished-room panel (`scrollWidth` 360 of 360) |
+| M2 (tap targets) | Pass: every button, field, and mode option is at least 44px tall |
+| M3 (keyboard only) | Pass: Tab order is name → Create room → code → name → Join room, each stop has a 3px outline, and Enter creates a room |
+| M4 (labels) | Pass: every input has a `<label>` and none relies on placeholder text |
+| Network drop (DevTools-style offline) | Pass: the home notice appears and joining shows the network message. In the lobby, RoomPage's banner appears, Start is disabled with the offline reason, and it re-enables after the browser comes back online |
+
+**Room code size:** 50.4px at 360px, up to 88px on a laptop. The five characters take 198px of a
+294px card at 360px.
+
+**Realtime rejoin (open item 10):** a Node script on `dev` dropped the socket uncleanly. The
+channel went `SUBSCRIBED` → `CHANNEL_ERROR` → `SUBSCRIBED` (after 1.25 s), and the server sent
+"Subscribed to PostgreSQL" again 60 ms after the re-subscribe. So `subscribeToRoom` still catches
+up after every reconnect.
+
+### What was built
+
+| File | Change |
+|---|---|
+| `src/features/home/HomePage.tsx`, `home.css` | Dead-end panel for finished, expired, and in-progress rooms; offline notice; focus moves to the field that needs fixing |
+| `src/features/lobby/LobbyPage.tsx`, `lobby.css` | Start is blocked while offline; refresh after a stale-room start error; bigger code (up to 5.5rem) and re-centred spacing; full-width Copy link when wrapped; tighter card padding below 400px |
+| `src/services/rooms.ts` | `subscribeToRoom` refetches on the `system` "Subscribed to PostgreSQL" message, not on `SUBSCRIBED` |
+| `HomePage.test.tsx`, `LobbyPage.test.tsx`, `rooms.test.ts` | `fix/home-lobby-polish`: 22 tests for the new behaviour. `test/lobby-ui`: 30 gap tests |
+
+### Decisions
+
+- **Rooms that can't be joined replace the join form.** `ROOM_FINISHED`, `ROOM_EXPIRED` and
+  `ROOM_NOT_JOINABLE` can never succeed for this browser (`join_room` already lets members back
+  in), so instead of an error above a form that would fail again, the card shows a heading
+  ("This game has ended", "This room has expired", "This game has already started"), what to do
+  next, and "Go to the home page". The create form stays visible below it.
+- **The panel takes focus** because the button that had focus is gone. It is a labelled `group`
+  whose text is its description, so a screen reader reads both. On `/` the link resets the form
+  and focuses the empty code field. On `/join/:code` it navigates home, which also resets the form.
+- **Focus follows errors.** A blocked submit or a field-level server error (`NAME_TAKEN`,
+  `ROOM_NOT_FOUND`, …) moves focus to that field, code first. The field's description already
+  includes the error.
+- **Network failure and rate limiting stay as form errors.** The form's own button is the retry,
+  and the name and code are kept. The home page also shows an offline notice while
+  `navigator.onLine` is false. The forms stay enabled, so a player can try as soon as the network
+  is back.
+- **The lobby uses `session.connection`.** Start is disabled while `offline`, with the reason as
+  text, but not while only `reconnecting`, because `start_round` goes over HTTP.
+- **Stale-room start errors refresh the session.** After `ROOM_EXPIRED`, `ROOM_FINISHED`,
+  `ROUND_IN_PROGRESS` or `NOT_A_MEMBER`, the lobby calls `session.refresh()` so RoomPage moves to
+  the right screen. Network errors don't refresh, since a refetch would only fail again.
+- **Contrast.** All text passes WCAG AA; the lowest pair is the green "Link copied" at 5.69:1. The
+  two non-text gaps below are C's tokens, so they were left as they are rather than overridden in
+  my CSS. Overriding them here would make focus look different on every other page.
+
+### Notes for the team
+
+- **For C (contrast, `theme.css` and `components.css`):**
+  - The focus ring `--color-focus: #f79009` is 2.22:1 against `--color-bg` and 2.35:1 against
+    white. WCAG 1.4.11 asks for 3:1. Options: a darker ring (for example `--color-warning`,
+    `#b54708`), or a two-tone ring (`outline` plus a dark `box-shadow`).
+  - Input borders (`--color-border`, `#d9d2c9`) are 1.50:1 against white, so text fields are hard
+    to see as fields. `--color-text-muted` for `.ui-field__input` would fix it.
+- **For C (`docs/manual-test-checklist.md`):** step E7 should now expect the heading "This game
+  has already started" and "New players can’t join a game in progress…". The old error text no
+  longer appears. E5 ("This game has ended") is unchanged.
+- **For C (`errors.ts`):** `RATE_LIMITED` says "Wait a minute and try again", but the limits are
+  per hour (5 rooms, 20 joins). Something like "Too many attempts. Try again later." would be
+  accurate.
+- **For C:** open item 10 is done. `subscribeToRoom` now refetches on its own channel's
+  "Subscribed to PostgreSQL" message, so the rooms and players channel no longer depends on the
+  rounds channel for that.
+
+---
+
 ## Phase 3 — Round Loop and Trusted Scoring
 
 **Branches:** `feat/lobby-start-game` (PR #22, merged) and `chore/end-game-generated-types`.
