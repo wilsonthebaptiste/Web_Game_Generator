@@ -101,18 +101,20 @@ You build UI against the fixtures while C builds the round RPCs.
 
 ## Phase 4 — End Game, Resilience, and Hardening
 
+**Status:** code work done (`fix/game-polish`, `test/round-ui`, `fix/content-review`). Still open: the manual check on a real phone and desktop.
+
 **Branch `fix/game-polish`:**
-- [ ] Mobile layout at 360px wide. Large answer targets. A prompt that can be read from across a room.
-- [ ] Correct and incorrect answers shown with an icon and text ("✓ Correct" / "✗ Incorrect"), not only color.
-- [ ] Focus management: move focus to the new prompt when a round starts and to the results heading on reveal.
-- [ ] States for when the round changes under you (the host revealed while you were typing) and for a failed submission.
+- [x] Mobile layout at 360px wide. Large answer targets. A prompt that can be read from across a room.
+- [x] Correct and incorrect answers shown with an icon and text ("✓ Correct" / "✗ Incorrect"), not only color.
+- [x] Focus management: move focus to the new prompt when a round starts and to the results heading on reveal.
+- [x] States for when the round changes under you (the host revealed while you were typing) and for a failed submission.
 
 **Branch `test/round-ui`:**
-- [ ] Fill gaps in RTL coverage for `GamePage`, `RoundView`, and `ResultsView`.
+- [x] Fill gaps in RTL coverage for `GamePage`, `RoundView`, and `ResultsView`.
 
-**Content review:** play through every content item once. Fix typos and ambiguous answers on a `fix/content-*` branch, then tell C so they can run `content:sync`.
+- [x] **Content review:** play through every content item once. Fix typos and ambiguous answers on a `fix/content-*` branch, then tell C so they can run `content:sync`. (Every item was reviewed on paper; fixes are on `fix/content-review`. C still needs to run `content:sync`.)
 
-**Manual check:** run the Gameplay section of `docs/manual-test-checklist.md` on a phone and a desktop.
+- [ ] **Manual check:** run the Gameplay section of `docs/manual-test-checklist.md` on a phone and a desktop.
 
 ---
 
