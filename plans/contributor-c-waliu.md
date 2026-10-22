@@ -65,7 +65,7 @@ Your PRs here unblock everyone. Aim to merge `chore/scaffold` on day one.
 - [x] `join_room(code, display_name)`: fail with `ROOM_NOT_FOUND`, `ROOM_EXPIRED`, or `ROOM_NOT_JOINABLE` (status ≠ `lobby`, unless this `auth.uid()` already joined, which is a rejoin). Fail with `NAME_TAKEN` if the name matches case-insensitively. Rate limit join attempts.
 - [x] `get_room_snapshot(code)`: member only. Returns room, players, current round (with no secrets), `me`, `myAnswer`.
 - [x] All RPCs are `security definer` with `set search_path = public` and `raise exception` using stable error codes. (Used `set search_path = ''`, which is stricter: every name is schema-qualified.)
-- [ ] Local `test:db` tests: happy paths and each error code. Written in `tests/integration/` and passing against `dev` (Docker not installed yet). `ROOM_NOT_JOINABLE` is covered in `round-rpcs.test.ts`. `ROOM_EXPIRED` can't be set up from a client (rooms last 12 hours), so it is only checked in PGlite during development.
+- [x] Local `test:db` tests: happy paths and each error code. Written in `tests/integration/` and passing against `dev`, and against the local Docker stack since Phase 3. `ROOM_NOT_JOINABLE` is covered in `round-rpcs.test.ts`. `ROOM_EXPIRED` can't be set up from a client (rooms last 12 hours), so it is only checked in PGlite during development.
 
 **Branch `feat/round-rpcs`:**
 - [x] `scripts/sync-content.ts` (run with `tsx`): reads `src/content/*`, splits each item into `public_payload` and `answer_key`, and writes a **new** `supabase/migrations/<ts>_content_sync.sql` with idempotent upserts. Items removed from the source get `active = false`.
