@@ -26,6 +26,35 @@ decisions, answers to A and B, and open items.
 
 ---
 
+## Exit gates: Phases 3 and 4 passed (2026-10-22)
+
+Run on `dev` (`npm run dev -- --host` on C's machine, content sync #36 live) following
+`docs/manual-test-checklist.md`: first with three desktop browser identities, then again with
+one player on a real phone over the local network.
+
+| Section | Result |
+|---|---|
+| R. Room and lobby (R1–R9, RX1–RX8, RH1–RH2) | Pass |
+| G. Gameplay, all three modes, double reveal, host double clicks (G1–G4) | Pass |
+| C. Refresh mid-round (C1) and a 30-second DevTools-offline drop (C3–C5) | Pass |
+| E. End game, refresh on the final screen, late joiners, tie (E1–E7) | Pass |
+| Phone run (a real phone as one of the players) | Pass: works properly on the phone |
+| M. Mobile and accessibility, desktop parts (M3 keyboard-only, M4 labels, M5 colour, M6 several browsers) | Not run separately |
+
+- **Phase 3 exit gate:** all six items pass (parity: `test:db` 69/69 locally). Ticked in
+  `plan.md`.
+- **Phase 4 exit gate:** all four items pass and are ticked. Coverage for the automated item:
+  `normalizeAnswer` (`validatePayload.test.ts`), `scoring.test.ts` plus the 18-fixture parity
+  test, `validatePayload.test.ts`, `winners.test.ts`, `roomCodes.test.ts`, `validation.test.ts`,
+  and the state-transition rejections in `tests/integration/` (`ROUND_IN_PROGRESS`,
+  `ROUND_NOT_ANSWERING`, `ROOM_NOT_JOINABLE`, `ROOM_FINISHED`, `ROUND_ALREADY_REVEALED`).
+- **For B:** the phone run is the check of #33's layout that B asked for; it worked.
+- **Before release:** the desktop accessibility checks in section M (keyboard-only play, labels,
+  not relying on colour, several browsers) haven't been run as their own pass. They're part of
+  the production checklist run in Phase 5.
+
+---
+
 ## Phase 4 — Content sync after B's review (`chore/content-sync-review`)
 
 B's #35 changed three content files: the trv-017 distractor ("6" → "9", since some places teach
