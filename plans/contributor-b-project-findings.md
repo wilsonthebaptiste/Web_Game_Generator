@@ -120,3 +120,25 @@ General rules:
 - `rounds.ts` now uses the generated `reveal_round` type; the local stand-in and cast are gone.
 - **One edit outside B's folders, at C's request to merge:** `src/app/useRoomSession.test.tsx:278` looked for the scaffold stub's `Round 2` heading, which the real view replaced with the prompt. It now checks `findByText(/Round 2 of 10/)`.
 - **Not verified yet:** the Phase 3 exit gate (two or more browsers against the dev database, all three modes).
+
+## 11. Phase 4: polish, tests, content review
+
+Three branches. `test/round-ui` is stacked on `fix/game-polish`, so merge the polish branch first. `fix/content-review` is independent.
+
+**`fix/game-polish`**
+- **Mobile, 360px.** The prompt scales with `clamp()` from `--font-size-xl` to `--font-size-xxl` so it can be read across a room. Answer options and the word field are at least 3.5rem tall. Long words wrap (`overflow-wrap: anywhere`). The results table sits in a horizontal scroll box and uses tighter padding under 400px.
+- **Correctness.** "✓ Correct" / "✗ Incorrect" were already text (Phase 2). A test now locks this in.
+- **Focus.** `RoundView` focuses the prompt `h1` when it mounts. It's keyed by round, so that happens every time a round starts. `ResultsView` focuses the "Results" `h1` on reveal. Both use `tabIndex={-1}`; the outline only shows with `:focus-visible`.
+- **Round changes under you.** `RoundView` reports through `onDirtyChange` whether the draft differs from the saved answer; for word guesses it compares trimmed text. When the round goes from answering to revealed, `GamePage` shows one of three notices: the reveal came before your answer was sent, before your latest change was sent (your earlier answer counted), or before you answered. There's no notice if your answer was already saved, or if the page first loads on the results. The notice clears when the next round starts.
+- **Failed submit.** A send failure now shows "Your answer wasn’t sent" with the friendly message and keeps the draft so you can retry. Validation errors still show inline. If the failure is `ROUND_NOT_ANSWERING`, `ROUND_ALREADY_REVEALED` or `ROUND_NOT_FOUND`, the session is refetched so the results replace the form.
+- Tests: `GamePolish.test.tsx` (18 cases).
+- **Not verified in a real browser.** This machine has no `.env` and no headless browser, so the 360px layout was checked by reading the CSS only. The manual check covers it.
+
+**`test/round-ui`**: 20 more RTL cases across `RoundView` (no round, inputs locked in flight, the 60-character cap, dirty tracking, other players only see the count), `ResultsView` (meta line, the single "(you)", no "also accepted", the choice-ID fallback, a player who left, no ✓/✗ in social, "+N" points) and `GamePage` (preselected mode, picker locked in flight, host error cleared on retry, the host also gets the answer form).
+
+**`fix/content-review`** (every item reviewed on paper; IDs unchanged)
+- `trv-017` (continents): the `6` distractor became `9`, because some places teach six continents.
+- Word guessing: added `ice-cream` (`wrd-008`), `cats` (`wrd-010`), `trees` (`wrd-012`), `umbrellas` (`wrd-015`) and `oceans` (`wrd-017`).
+- `soc-017`: "in your hometown" became "for their own hometown", so it's clear whose hometown it is.
+- **For C:** run `npm run content:sync` after this merges.
+

@@ -252,3 +252,39 @@ describe('GamePage: submitting answers', () => {
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
   })
 })
+
+describe('GamePage: coverage gaps', () => {
+  it('preselects the mode the room last used for the next round', () => {
+    render(<GamePage session={hostRevealed('word-guessing')} />)
+    expect(screen.getByRole('radio', { name: /Word guessing/i })).toBeChecked()
+  })
+
+  it('locks the mode picker while the next round is starting', async () => {
+    const user = userEvent.setup()
+    mocked.startRound.mockReturnValue(new Promise(() => {}))
+    render(<GamePage session={hostRevealed('trivia')} />)
+
+    await user.click(screen.getByRole('button', { name: 'Next round' }))
+    for (const radio of screen.getAllByRole('radio')) expect(radio).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Starting round…' })).toBeDisabled()
+  })
+
+  it('clears a host error when the host retries', async () => {
+    const user = userEvent.setup()
+    mocked.revealRound.mockRejectedValueOnce(new TypeError('Failed to fetch'))
+    mocked.revealRound.mockReturnValueOnce(new Promise(() => {}))
+    render(<GamePage session={hostAnswering('social')} />)
+
+    await user.click(screen.getByRole('button', { name: 'Lock & reveal' }))
+    expect(await screen.findByRole('alert')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Lock & reveal' }))
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(mocked.revealRound).toHaveBeenCalledTimes(2)
+  })
+
+  it('shows the host the answer form as well as the reveal button', () => {
+    render(<GamePage session={hostAnswering('trivia')} />)
+    expect(screen.getByRole('button', { name: 'Submit answer' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Lock & reveal' })).toBeInTheDocument()
+  })
+})
