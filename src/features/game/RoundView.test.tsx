@@ -200,3 +200,71 @@ describe('RoundView: submitting', () => {
     expect(alert.textContent).not.toBe('')
   })
 })
+
+describe('RoundView: coverage gaps', () => {
+  it('renders nothing when there is no round', () => {
+    const { container } = render(
+      <RoundView session={{ ...answeringSessions.trivia.notSubmitted, currentRound: null }} />,
+    )
+    expect(container).toBeEmptyDOMElement()
+  })
+
+  it.each(GAME_MODES)('%s locks the inputs while the request is in flight', async (mode) => {
+    const onSubmit = vi.fn(() => new Promise<void>(() => {}))
+    render(<RoundView session={answeringSessions[mode].submitted} onSubmit={onSubmit} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Update answer' }))
+    if (mode === 'word-guessing') {
+      expect(screen.getByRole('textbox')).toBeDisabled()
+    } else {
+      for (const radio of screen.getAllByRole('radio')) expect(radio).toBeDisabled()
+    }
+  })
+
+  it('caps a word guess at 60 characters and counts them', async () => {
+    render(<RoundView session={answeringSessions['word-guessing'].notSubmitted} />)
+    const input = screen.getByRole('textbox')
+    expect(input).toHaveAttribute('maxLength', '60')
+    await userEvent.type(input, 'x'.repeat(70))
+    expect(input).toHaveValue('x'.repeat(60))
+    expect(screen.getByText('60/60 characters')).toBeInTheDocument()
+  })
+
+  it('reports an unsent change and clears it when the change is undone', async () => {
+    const onDirtyChange = vi.fn()
+    render(<RoundView session={answeringSessions.trivia.submitted} onDirtyChange={onDirtyChange} />)
+    expect(onDirtyChange).toHaveBeenLastCalledWith(false)
+
+    await userEvent.click(screen.getByRole('radio', { name: 'Mars' }))
+    expect(onDirtyChange).toHaveBeenLastCalledWith(true)
+
+    await userEvent.click(screen.getByRole('radio', { name: 'Venus' }))
+    expect(onDirtyChange).toHaveBeenLastCalledWith(false)
+  })
+
+  it('treats spaces around a saved word guess as no change', async () => {
+    const onDirtyChange = vi.fn()
+    render(
+      <RoundView
+        session={answeringSessions['word-guessing'].submitted}
+        onDirtyChange={onDirtyChange}
+      />,
+    )
+    await userEvent.type(screen.getByRole('textbox'), '  ')
+    expect(onDirtyChange).toHaveBeenLastCalledWith(false)
+  })
+
+  it('keeps the validation message inline and sends nothing for a missing vote', async () => {
+    const onSubmit = vi.fn()
+    render(<RoundView session={answeringSessions.social.notSubmitted} onSubmit={onSubmit} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Submit answer' }))
+    expect(onSubmit).not.toHaveBeenCalled()
+    expect(screen.getByRole('alert')).not.toHaveTextContent('Your answer wasn’t sent')
+  })
+
+  it('shows other players only the count, never who submitted', () => {
+    render(<RoundView session={viewAs(answeringSessions.trivia.submitted, CLEO_ID)} />)
+    expect(screen.getByRole('status')).toHaveTextContent('2 / 3 submitted')
+    expect(screen.getByRole('status')).toHaveTextContent('Waiting for your answer')
+    expect(screen.queryByText(/Ava|Ben/)).not.toBeInTheDocument()
+  })
+})

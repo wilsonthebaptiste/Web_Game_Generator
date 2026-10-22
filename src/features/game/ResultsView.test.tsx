@@ -94,3 +94,75 @@ describe('ResultsView', () => {
     expect(screen.getByRole('button', { name: 'Next round' })).toBeInTheDocument()
   })
 })
+
+describe('ResultsView: coverage gaps', () => {
+  it('shows the round number and mode', () => {
+    render(<ResultsView session={revealedSessions['word-guessing']} />)
+    expect(screen.getByText('Round 2 of 10 · Word guessing')).toBeInTheDocument()
+  })
+
+  it('marks only the viewer’s row with "(you)"', () => {
+    render(<ResultsView session={revealedSessions.trivia} />)
+    expect(screen.getAllByText(/\(you\)/)).toHaveLength(1)
+    expect(rowFor(/Ben/)).toHaveTextContent('(you)')
+  })
+
+  it('leaves out "also accepted" when there are no other variants', () => {
+    const base = revealedSessions['word-guessing']
+    const round = base.currentRound!
+    const session: RoomSession = {
+      ...base,
+      currentRound: {
+        ...round,
+        revealSnapshot: {
+          mode: 'word-guessing',
+          targetAnswer: 'Penguin',
+          acceptedAnswers: ['PENGUIN'],
+          results: round.revealSnapshot!.results,
+        },
+      },
+    }
+    render(<ResultsView session={session} />)
+    expect(screen.getByText('Correct answer: Penguin')).toBeInTheDocument()
+    expect(screen.queryByText(/also accepted/)).not.toBeInTheDocument()
+  })
+
+  it('falls back to the choice id when the correct choice is not in the prompt', () => {
+    const base = revealedSessions.trivia
+    const round = base.currentRound!
+    const session: RoomSession = {
+      ...base,
+      currentRound: {
+        ...round,
+        revealSnapshot: {
+          mode: 'trivia',
+          correctChoiceId: 'z',
+          results: round.revealSnapshot!.results,
+        },
+      },
+    }
+    render(<ResultsView session={session} />)
+    expect(screen.getByText('Correct answer: z')).toBeInTheDocument()
+  })
+
+  it('names a player who left instead of showing an id', () => {
+    const session = withResults(revealedSessions.social, [
+      ...revealedSessions.social.currentRound!.revealSnapshot!.results,
+      { playerId: 'gone', answer: { votedPlayerId: 'gone' }, pointsAwarded: 0, isCorrect: null },
+    ])
+    render(<ResultsView session={session} />)
+    expect(screen.getAllByText('A player who left').length).toBeGreaterThan(0)
+    expect(screen.queryByText('gone')).not.toBeInTheDocument()
+  })
+
+  it('shows no ✓ or ✗ in a social round', () => {
+    render(<ResultsView session={revealedSessions.social} />)
+    expect(screen.queryByText(/✓|✗/)).not.toBeInTheDocument()
+  })
+
+  it('shows the points each player got this round with a plus sign', () => {
+    render(<ResultsView session={revealedSessions.social} />)
+    expect(within(rowFor(/Ben/)).getByText('+2')).toBeInTheDocument()
+    expect(within(rowFor(/Cleo/)).getByText('+0')).toBeInTheDocument()
+  })
+})
