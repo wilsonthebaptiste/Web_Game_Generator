@@ -1,4 +1,5 @@
-import type { RoomSession } from '../../types/game'
+import { useState } from 'react'
+import type { RoomSession, RoundStatus } from '../../types/game'
 import { Leaderboard } from '../leaderboard/Leaderboard'
 import { HostResultsControls, HostRoundControls } from './HostControls'
 import { ResultsView } from './ResultsView'
@@ -16,6 +17,21 @@ export interface GamePageProps {
  */
 export function GamePage({ session }: GamePageProps) {
   const round = session.currentRound
+  const [dirty, setDirty] = useState(false)
+  const [seen, setSeen] = useState<{ id: string; status: RoundStatus } | null>(
+    round && { id: round.id, status: round.status },
+  )
+  const [notice, setNotice] = useState<string | null>(null)
+
+  // Notice when the round changes under the player (the host revealed while they were still
+  // answering). Adjusting state during render is React's pattern for reacting to a prop change.
+  if (round && (seen?.id !== round.id || seen.status !== round.status)) {
+    const revealedUnderYou =
+      seen?.id === round.id && seen.status === 'answering' && round.status === 'revealed'
+    setSeen({ id: round.id, status: round.status })
+    setNotice(revealedUnderYou ? revealNotice(dirty, session.myAnswer !== null) : null)
+    setDirty(false)
+  }
 
   if (!round) {
     return (
@@ -28,6 +44,11 @@ export function GamePage({ session }: GamePageProps) {
   if (round.status === 'revealed') {
     return (
       <main className="app-main">
+        {notice && (
+          <p className="game-notice" role="status">
+            {notice}
+          </p>
+        )}
         <ResultsView
           session={session}
           leaderboard={
@@ -57,8 +78,18 @@ export function GamePage({ session }: GamePageProps) {
   return (
     <main className="app-main">
       {/* Keyed by round so a new round starts with an empty draft. */}
-      <RoundView key={round.id} session={session} />
+      <RoundView key={round.id} session={session} onDirtyChange={setDirty} />
       {session.isHost && <HostRoundControls key={round.id} session={session} round={round} />}
     </main>
   )
+}
+
+/** What to tell a player whose round was revealed before they finished answering. */
+function revealNotice(dirty: boolean, answered: boolean): string | null {
+  if (dirty && answered) {
+    return 'The host revealed the round before your latest change was sent. Your earlier answer counted.'
+  }
+  if (dirty) return 'The host revealed the round before your answer was sent.'
+  if (!answered) return 'The host revealed the round before you answered.'
+  return null
 }

@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import type { RevealSnapshot, RoomSession, RoundResult } from '../../types/game'
 import { answerLabel, playerName } from './answerLabel'
 import { MODE_INFO } from './modes'
@@ -52,6 +52,13 @@ function correctness(result: RoundResult): string | null {
 export function ResultsView({ session, leaderboard, children }: ResultsViewProps) {
   const round = session.currentRound
   const reveal = round?.revealSnapshot
+  const headingRef = useRef<HTMLHeadingElement>(null)
+
+  // Results replace the round on reveal, so focus lands on the results heading.
+  useEffect(() => {
+    headingRef.current?.focus()
+  }, [])
+
   if (!round || !reveal) return null
 
   return (
@@ -59,45 +66,49 @@ export function ResultsView({ session, leaderboard, children }: ResultsViewProps
       <p className="game-round__meta">
         Round {round.roundNumber} of {session.room.roundLimit} · {MODE_INFO[round.mode].label}
       </p>
-      <h1 id="game-results-heading">Results</h1>
+      <h1 id="game-results-heading" ref={headingRef} tabIndex={-1}>
+        Results
+      </h1>
       <p className="game-results__prompt">{round.promptSnapshot.prompt}</p>
       <p className="game-results__outcome">{outcome(reveal, session)}</p>
 
-      <table className="game-results__table">
-        <caption className="visually-hidden">Answers and points this round</caption>
-        <thead>
-          <tr>
-            <th scope="col">Player</th>
-            <th scope="col">{reveal.mode === 'social' ? 'Voted for' : 'Answer'}</th>
-            <th scope="col">Points</th>
-          </tr>
-        </thead>
-        <tbody>
-          {reveal.results.map((result) => {
-            const mark = correctness(result)
-            return (
-              <tr key={result.playerId}>
-                <th scope="row">
-                  {playerName(result.playerId, session.players)}
-                  {result.playerId === session.me.id && ' (you)'}
-                </th>
-                <td>
-                  {answerLabel(result.answer, round.promptSnapshot, session.players)}
-                  {mark && (
-                    <span
-                      className={result.isCorrect ? 'game-mark game-mark--correct' : 'game-mark'}
-                    >
-                      {' '}
-                      {mark}
-                    </span>
-                  )}
-                </td>
-                <td>+{result.pointsAwarded}</td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
+      <div className="game-results__scroll">
+        <table className="game-results__table">
+          <caption className="visually-hidden">Answers and points this round</caption>
+          <thead>
+            <tr>
+              <th scope="col">Player</th>
+              <th scope="col">{reveal.mode === 'social' ? 'Voted for' : 'Answer'}</th>
+              <th scope="col">Points</th>
+            </tr>
+          </thead>
+          <tbody>
+            {reveal.results.map((result) => {
+              const mark = correctness(result)
+              return (
+                <tr key={result.playerId}>
+                  <th scope="row">
+                    {playerName(result.playerId, session.players)}
+                    {result.playerId === session.me.id && ' (you)'}
+                  </th>
+                  <td>
+                    {answerLabel(result.answer, round.promptSnapshot, session.players)}
+                    {mark && (
+                      <span
+                        className={result.isCorrect ? 'game-mark game-mark--correct' : 'game-mark'}
+                      >
+                        {' '}
+                        {mark}
+                      </span>
+                    )}
+                  </td>
+                  <td>+{result.pointsAwarded}</td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
 
       {leaderboard && <div className="game-results__leaderboard">{leaderboard}</div>}
       {children}

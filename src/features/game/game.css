@@ -204,3 +204,75 @@
   margin-top: var(--space-5);
   color: var(--color-text-muted);
 }
+
+/* Phase 4 polish: readable from across a room, large targets, 360px wide */
+
+.game-round__prompt {
+  font-size: clamp(var(--font-size-xl), 6vw + 0.5rem, var(--font-size-xxl));
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.game-round__prompt:focus,
+#game-results-heading:focus {
+  outline: none;
+}
+
+.game-round__prompt:focus-visible,
+#game-results-heading:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+
+.game-option {
+  min-height: 3.5rem;
+  overflow-wrap: anywhere;
+}
+
+.game-option input {
+  flex-shrink: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.game-word__input {
+  min-height: 3.5rem;
+}
+
+.game-results__prompt {
+  overflow-wrap: anywhere;
+}
+
+.game-results__outcome {
+  font-size: var(--font-size-lg);
+  overflow-wrap: anywhere;
+}
+
+.game-results__scroll {
+  overflow-x: auto;
+}
+
+.game-results__table td,
+.game-results__table th {
+  overflow-wrap: anywhere;
+}
+
+.game-notice {
+  padding: var(--space-3) var(--space-4);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-muted);
+  font-weight: 600;
+}
+
+@media (max-width: 400px) {
+  .game-results__table th,
+  .game-results__table td {
+    padding: var(--space-2) var(--space-1);
+  }
+
+  .game-option {
+    padding: var(--space-3);
+    font-size: var(--font-size-md);
+  }
+}
