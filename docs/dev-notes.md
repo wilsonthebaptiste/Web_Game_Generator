@@ -35,6 +35,10 @@ Newest entries go at the top of each section.
 
 ## Testing
 
+- **Splitting players across one machine:** Chrome normal and incognito are two players, and a
+  different browser is a third. For the network-drop steps use one window's DevTools → Network →
+  Offline, not the computer's Wi-Fi, which would disconnect every player at once. The VS Code
+  browser works as a player but may lose its session on reload, so keep refresh steps elsewhere.
 - **Manual checks:** [`manual-test-checklist.md`](manual-test-checklist.md) is the step-by-step
   script for real browsers (spec §13). Run it for the Phase 4 gate on `dev` and on production
   before release. If you change something a step describes (a label, a message, a flow), update

@@ -149,12 +149,12 @@ A and B can draft their contract feedback before the scaffold merges. They branc
 **Merge order:** `feat/reveal-scoring` → `feat/round-services` → `feat/scoreboard` → `feat/lobby-start-game` → `feat/game-flow`. B's `ResultsView` imports C's `Leaderboard`, so `feat/scoreboard` merges before `feat/game-flow`.
 
 **Exit gate (two or more browsers, each mode):**
-- [ ] Host starts a round and every player sees the same prompt.
-- [ ] A player submits, sees confirmation, edits before the reveal, and cannot edit after it.
-- [ ] Players who did not submit show "No answer" after the reveal.
-- [ ] Scores match the rules in §1.5, update for everyone, and carry across rounds.
-- [ ] Calling `reveal_round` twice (two clicks or a console call) awards points only once and the second call returns `ROUND_ALREADY_REVEALED`.
-- [ ] Scoring parity test passes locally (`npm run test:db`).
+- [x] Host starts a round and every player sees the same prompt.
+- [x] A player submits, sees confirmation, edits before the reveal, and cannot edit after it.
+- [x] Players who did not submit show "No answer" after the reveal.
+- [x] Scores match the rules in §1.5, update for everyone, and carry across rounds.
+- [x] Calling `reveal_round` twice (two clicks or a console call) awards points only once and the second call returns `ROUND_ALREADY_REVEALED`.
+- [x] Scoring parity test passes locally (`npm run test:db`).
 
 ---
 
@@ -171,10 +171,10 @@ A and B can draft their contract feedback before the scaffold merges. They branc
 **Merge order:** `feat/final-screen` → `feat/reconnect`. Everything else is independent and can merge in any order.
 
 **Exit gate:**
-- [ ] Every Room/Lobby, Gameplay, and End Game box in spec §13 is checked, using `docs/manual-test-checklist.md` with two or more browsers, one of them a phone.
-- [ ] A refresh mid-round and a 30-second network drop (DevTools offline) both recover the correct round, answer status, and scores.
-- [ ] A tie for first shows all tied winners.
-- [ ] Automated tests cover normalization, scoring, payload validation, `computeWinners`, room code and name validation, and state-transition rejections.
+- [x] Every Room/Lobby, Gameplay, and End Game box in spec §13 is checked, using `docs/manual-test-checklist.md` with two or more browsers, one of them a phone.
+- [x] A refresh mid-round and a 30-second network drop (DevTools offline) both recover the correct round, answer status, and scores.
+- [x] A tie for first shows all tied winners.
+- [x] Automated tests cover normalization, scoring, payload validation, `computeWinners`, room code and name validation, and state-transition rejections.
 
 ---
 
