@@ -122,7 +122,7 @@ export const socialPromptItems: SocialContentItem[] = [
   {
     id: 'soc-017',
     type: 'social',
-    prompt: 'Who would be the best tour guide in your hometown?',
+    prompt: 'Who would be the best tour guide for their own hometown?',
     responseType: 'vote-for-player',
     instructions: VOTE,
   },

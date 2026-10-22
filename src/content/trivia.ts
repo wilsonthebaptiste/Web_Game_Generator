@@ -232,7 +232,7 @@ export const triviaItems: TriviaContentItem[] = [
     prompt: 'How many continents are there on Earth?',
     choices: [
       { id: 'a', label: '5' },
-      { id: 'b', label: '6' },
+      { id: 'b', label: '9' },
       { id: 'c', label: '7' },
       { id: 'd', label: '8' },
     ],

@@ -55,7 +55,7 @@ export const wordGuessingItems: WordGuessingContentItem[] = [
     type: 'word-guessing',
     prompt: 'A cold dessert served in a cone.',
     targetAnswer: 'ice cream',
-    acceptedAnswers: ['icecream', 'gelato'],
+    acceptedAnswers: ['icecream', 'ice-cream', 'gelato'],
   },
   {
     id: 'wrd-009',
@@ -69,7 +69,7 @@ export const wordGuessingItems: WordGuessingContentItem[] = [
     type: 'word-guessing',
     prompt: 'A pet that purrs and chases mice.',
     targetAnswer: 'cat',
-    acceptedAnswers: ['kitten', 'kitty'],
+    acceptedAnswers: ['cats', 'kitten', 'kitty'],
   },
   {
     id: 'wrd-011',
@@ -83,6 +83,7 @@ export const wordGuessingItems: WordGuessingContentItem[] = [
     type: 'word-guessing',
     prompt: 'A tall plant with a trunk, branches, and leaves.',
     targetAnswer: 'tree',
+    acceptedAnswers: ['trees'],
   },
   {
     id: 'wrd-013',
@@ -102,6 +103,7 @@ export const wordGuessingItems: WordGuessingContentItem[] = [
     type: 'word-guessing',
     prompt: 'Something you open overhead when it rains.',
     targetAnswer: 'umbrella',
+    acceptedAnswers: ['umbrellas'],
   },
   {
     id: 'wrd-016',
@@ -114,7 +116,7 @@ export const wordGuessingItems: WordGuessingContentItem[] = [
     type: 'word-guessing',
     prompt: 'The large body of salt water that covers most of Earth.',
     targetAnswer: 'ocean',
-    acceptedAnswers: ['sea', 'the ocean'],
+    acceptedAnswers: ['oceans', 'sea', 'the ocean'],
   },
   {
     id: 'wrd-018',
