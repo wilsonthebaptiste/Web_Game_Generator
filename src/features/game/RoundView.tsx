@@ -1,8 +1,9 @@
-import { useRef, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Button } from '../../components/Button'
+import { ErrorMessage } from '../../components/ErrorMessage'
 import { toAppError } from '../../lib/errors'
 import { submitAnswer } from '../../services/answers'
-import type { AnswerPayload, PromptSnapshot, RoomSession } from '../../types/game'
+import type { AnswerPayload, AppErrorCode, PromptSnapshot, RoomSession } from '../../types/game'
 import { MODE_INFO } from './modes'
 import { PlayerVote } from './PlayerVote'
 import { validateAnswerPayload } from './rules/validatePayload'
@@ -14,6 +15,8 @@ export interface RoundViewProps {
   session: RoomSession
   /** Sends the answer. Defaults to `submitAnswer` followed by `session.refresh()`. */
   onSubmit?: (roundId: string, payload: AnswerPayload) => Promise<void>
+  /** Told whether the draft holds a change that hasn't been sent yet. */
+  onDirtyChange?: (dirty: boolean) => void
 }
 
 /** Draft input for every mode. Only the field for the current mode is used. */
@@ -31,6 +34,26 @@ function draftFrom(answer: AnswerPayload | null): Draft {
   }
 }
 
+/** True when the draft differs from the saved answer (or is filled in with nothing saved). */
+function isDirty(prompt: PromptSnapshot, draft: Draft, saved: AnswerPayload | null): boolean {
+  const base = draftFrom(saved)
+  switch (prompt.mode) {
+    case 'trivia':
+      return draft.choiceId !== base.choiceId
+    case 'word-guessing':
+      return draft.text.trim() !== base.text.trim()
+    case 'social':
+      return draft.votedPlayerId !== base.votedPlayerId
+  }
+}
+
+/** Errors that mean the round moved on under the player, so the session should catch up. */
+const ROUND_MOVED_ON = new Set<AppErrorCode>([
+  'ROUND_NOT_ANSWERING',
+  'ROUND_ALREADY_REVEALED',
+  'ROUND_NOT_FOUND',
+])
+
 function payloadFrom(prompt: PromptSnapshot, draft: Draft): unknown {
   switch (prompt.mode) {
     case 'trivia':
@@ -46,11 +69,27 @@ function payloadFrom(prompt: PromptSnapshot, draft: Draft): unknown {
  * The answering state of a round. Everything shown comes from `round.promptSnapshot`, the
  * player list, and the viewer's own `myAnswer`. Other players' answers never reach this view.
  */
-export function RoundView({ session, onSubmit }: RoundViewProps) {
+export function RoundView({ session, onSubmit, onDirtyChange }: RoundViewProps) {
   const round = session.currentRound
   const [draft, setDraft] = useState<Draft>(() => draftFrom(session.myAnswer))
   const [pending, setPending] = useState(false)
+  /** A validation problem: shown inline, nothing was sent. */
   const [error, setError] = useState<string | null>(null)
+  /** The request failed: the answer was not saved. */
+  const [sendError, setSendError] = useState<string | null>(null)
+  const promptRef = useRef<HTMLHeadingElement>(null)
+  const dirty = round ? isDirty(round.promptSnapshot, draft, session.myAnswer) : false
+
+  // A new round mounts a new RoundView (it is keyed by round), so this moves focus to the
+  // new prompt each time a round starts.
+  useEffect(() => {
+    promptRef.current?.focus()
+  }, [])
+
+  useEffect(() => {
+    onDirtyChange?.(dirty)
+  }, [dirty, onDirtyChange])
+
   // Blocks a second submit before React re-renders the disabled button.
   const inFlight = useRef(false)
 
@@ -61,6 +100,7 @@ export function RoundView({ session, onSubmit }: RoundViewProps) {
   const update = (patch: Partial<Draft>) => {
     setDraft((d) => ({ ...d, ...patch }))
     setError(null)
+    setSendError(null)
   }
 
   const handleSubmit = async (event: FormEvent) => {
@@ -79,6 +119,7 @@ export function RoundView({ session, onSubmit }: RoundViewProps) {
     inFlight.current = true
     setPending(true)
     setError(null)
+    setSendError(null)
     try {
       if (onSubmit) {
         await onSubmit(round.id, result.value)
@@ -87,7 +128,10 @@ export function RoundView({ session, onSubmit }: RoundViewProps) {
         await session.refresh()
       }
     } catch (err) {
-      setError(toAppError(err).message)
+      const appError = toAppError(err)
+      setSendError(appError.message)
+      // The host revealed while this was in flight: refetch so the results replace the form.
+      if (ROUND_MOVED_ON.has(appError.code)) void session.refresh()
     } finally {
       inFlight.current = false
       setPending(false)
@@ -99,7 +143,7 @@ export function RoundView({ session, onSubmit }: RoundViewProps) {
       <p className="game-round__meta">
         Round {round.roundNumber} of {session.room.roundLimit} · {MODE_INFO[round.mode].label}
       </p>
-      <h1 id="game-round-prompt" className="game-round__prompt">
+      <h1 id="game-round-prompt" className="game-round__prompt" ref={promptRef} tabIndex={-1}>
         {prompt.prompt}
       </h1>
       {prompt.mode === 'social' && prompt.instructions && (
@@ -138,6 +182,7 @@ export function RoundView({ session, onSubmit }: RoundViewProps) {
             {error}
           </p>
         )}
+        {sendError && <ErrorMessage title="Your answer wasn’t sent" message={sendError} />}
 
         <Button type="submit" fullWidth isLoading={pending} loadingText="Submitting…">
           {submitted ? 'Update answer' : 'Submit answer'}
