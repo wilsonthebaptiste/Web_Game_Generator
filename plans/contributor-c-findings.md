@@ -22,7 +22,25 @@ decisions, answers to A and B, and open items.
 | 7 | Docker isn't installed on C's machine, so `npm run test:db` runs against `dev` instead of a local stack. Needed before the Phase 3 scoring parity test. | C | **Done:** Docker Desktop plus `npx supabase start`; parity test runs locally |
 | 8 | Branch protection on `main`: Wilson owns the repo. | C | Waiting on A |
 | 11 | Supabase paused `party-game-prod` on 2026-10-18 after 7 days without traffic (Free plan). Nothing uses prod yet, so it stays paused; restore it from the dashboard (within 90 days) at the start of the deploy phase. Once live, a quiet week would take the site down again, and `dev` can pause the same way. The team needs to decide before launch: Pro plan, or accept the risk. | C | Decide before deploy (team) |
-| 12 | `GamePage`: `RoundView` and `HostRoundControls` share `key={round.id}` as siblings (React duplicate-key warning). Give the controls e.g. ``key={`host-${round.id}`}``. | C | To do (B) |
+| 12 | `GamePage`: `RoundView` and `HostRoundControls` share `key={round.id}` as siblings (React duplicate-key warning). Give the controls e.g. ``key={`host-${round.id}`}``. | C, A | To do (B). Still present after #33 |
+
+---
+
+## Phase 4 — Content sync after B's review (`chore/content-sync-review`)
+
+B's #35 changed three content files: the trv-017 distractor ("6" → "9", since some places teach
+six continents), soc-017's wording ("their own hometown"), and extra accepted answers for
+wrd-008, wrd-010, wrd-012, wrd-015, and wrd-017. `npm run content:sync` wrote
+`20261022191608_content_sync.sql`.
+
+- **Reviewed:** the same 54 IDs as the first sync, nothing deactivated, and each of B's edits
+  appears once. trv-017's correct answer is still `c` (7).
+- **Checked locally:** applied with `supabase migration up --local`; 54/54 items active; the
+  new accepted answers and the soc-017 prompt are in the table; `test:db` 69/69.
+- **Lesson:** content PRs need "needs content:sync" where C will see it (added to
+  `docs/dev-notes.md`).
+- **Still open:** item 12 (duplicate `key={round.id}` in `GamePage.tsx`) survived B's polish PR
+  (#33); both `RoundView` and `HostRoundControls` are still keyed `round.id`.
 
 ---
 

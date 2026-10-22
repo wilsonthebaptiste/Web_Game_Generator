@@ -277,6 +277,11 @@ rather than deleted, because old rounds still reference them, and they're never 
 Changing an item's text changes it for future rounds only; rounds already played keep their
 snapshot. Never reuse an old ID for a different question.
 
+**Until C syncs, the database still serves the old content.** Merging a `src/content/` PR
+changes nothing players see. Put "needs content:sync" in the PR title or description so C
+notices, and C syncs the same day. (B's content review, #35, sat unsynced for two days because
+the note was only in the commit body.)
+
 ## Tooling and versions
 
 - **Don't call `setState` directly in an effect body.** The React hooks lint rule
