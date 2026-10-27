@@ -29,6 +29,11 @@ function renderLobby(session: RoomSession) {
   return { user }
 }
 
+const withSelectedMode = (session: RoomSession): RoomSession => ({
+  ...session,
+  room: { ...session.room, selectedMode: 'trivia' },
+})
+
 const playerList = () => screen.getByRole('list', { name: /Players/ })
 const playerRow = (name: string) =>
   within(playerList())
@@ -358,5 +363,204 @@ describe('copy join link', () => {
 
     expect(input).toHaveAttribute('readonly')
     expect([input.selectionStart, input.selectionEnd]).toEqual([0, joinLink.length])
+  })
+})
+
+describe('non-hosts never see host controls', () => {
+  const hostControlsAbsent = () => {
+    expect(screen.queryByRole('region', { name: 'Host controls' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: 'Choose a game mode' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('radio')).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /Start game|Starting game/ }),
+    ).not.toBeInTheDocument()
+    expect(screen.getByText('Waiting for host to start…')).toBeVisible()
+  }
+
+  const twoPlayers = (base: RoomSession): RoomSession => ({
+    ...base,
+    players: base.players.slice(0, 2),
+  })
+  const variants: [string, (base: RoomSession) => RoomSession][] = [
+    ['a fresh lobby', (base) => base],
+    [
+      'a mode already chosen',
+      (base) => ({ ...base, room: { ...base.room, selectedMode: 'social' } }),
+    ],
+    ['the browser offline', (base) => ({ ...base, connection: 'offline' })],
+    ['realtime reconnecting', (base) => ({ ...base, connection: 'reconnecting' })],
+  ]
+
+  describe.each([
+    ['Ben', BEN_ID],
+    ['Cleo', CLEO_ID],
+  ])('%s', (name, viewerId) => {
+    it.each(variants)('with %s', (_label, variant) => {
+      const session = variant(viewAs(lobbyHost, viewerId))
+      renderLobby(session)
+
+      expect(session.isHost).toBe(false)
+      hostControlsAbsent()
+      expect(playerRow(name)).toHaveTextContent('You')
+    })
+  })
+
+  it('in a two-player room, where Start would be enabled for the host', () => {
+    renderLobby(twoPlayers(viewAs(withSelectedMode(lobbyHost), BEN_ID)))
+
+    hostControlsAbsent()
+  })
+
+  it('stays without host controls as the lobby updates live', () => {
+    const guest = viewAs(lobbyHost, BEN_ID)
+    const { rerender } = render(<LobbyPage session={twoPlayers(guest)} />)
+    hostControlsAbsent()
+
+    rerender(<LobbyPage session={guest} />)
+    hostControlsAbsent()
+    expect(screen.getByRole('heading', { name: 'Players (3)' })).toBeVisible()
+
+    rerender(<LobbyPage session={withSelectedMode(guest)} />)
+    hostControlsAbsent()
+    expect(startRound).not.toHaveBeenCalled()
+  })
+
+  it('follows session.isHost, not who is listed first', () => {
+    const guest = viewAs(lobbyHost, BEN_ID)
+    renderLobby({ ...guest, players: [...guest.players].reverse() })
+
+    hostControlsAbsent()
+    expect(playerRow('Ava')).toHaveTextContent('Host')
+  })
+})
+
+describe('live lobby updates', () => {
+  it('adds a player who joins without losing the host’s mode choice', async () => {
+    const user = userEvent.setup()
+    const { rerender } = render(<LobbyPage session={lobbyHostAlone} />)
+    await user.click(screen.getByRole('radio', { name: 'Social' }))
+    expect(screen.getByRole('button', { name: 'Start game' })).toBeDisabled()
+
+    rerender(<LobbyPage session={lobbyHost} />)
+
+    expect(screen.getByRole('heading', { name: 'Players (3)' })).toBeVisible()
+    expect(screen.getByRole('radio', { name: 'Social' })).toBeChecked()
+    expect(screen.getByRole('button', { name: 'Start game' })).toBeEnabled()
+    expect(screen.queryByText(/Waiting for others to join/)).not.toBeInTheDocument()
+  })
+
+  it('removes a player who is no longer in the snapshot', () => {
+    const { rerender } = render(<LobbyPage session={lobbyGuest} />)
+    expect(screen.getByRole('heading', { name: 'Players (3)' })).toBeVisible()
+
+    rerender(
+      <LobbyPage
+        session={{ ...lobbyGuest, players: lobbyGuest.players.filter((p) => p.id !== CLEO_ID) }}
+      />,
+    )
+
+    expect(screen.getByRole('heading', { name: 'Players (2)' })).toBeVisible()
+    expect(within(playerList()).queryByText('Cleo')).not.toBeInTheDocument()
+  })
+
+  it('disables Start again if the lobby drops back to one player', async () => {
+    const user = userEvent.setup()
+    const { rerender } = render(<LobbyPage session={lobbyHost} />)
+    await user.click(screen.getByRole('radio', { name: 'Trivia' }))
+    expect(screen.getByRole('button', { name: 'Start game' })).toBeEnabled()
+
+    rerender(<LobbyPage session={{ ...lobbyHost, players: lobbyHost.players.slice(0, 1) }} />)
+
+    expect(screen.getByRole('button', { name: 'Start game' })).toBeDisabled()
+    expect(screen.getByText('You need at least 2 players to start.')).toBeVisible()
+  })
+})
+
+describe('keyboard', () => {
+  it('lets the host choose a mode and start the game without a mouse', async () => {
+    startRound.mockResolvedValue({ id: 'round-1' } as Round)
+    const { user } = renderLobby({ ...lobbyHost, refresh: vi.fn(async () => {}) })
+
+    screen.getByRole('radio', { name: 'Trivia' }).focus()
+    await user.keyboard(' ')
+    expect(screen.getByRole('radio', { name: 'Trivia' })).toBeChecked()
+
+    screen.getByRole('button', { name: 'Start game' }).focus()
+    await user.keyboard('{Enter}')
+
+    expect(startRound).toHaveBeenCalledWith(lobbyHost.room.id, 'trivia')
+  })
+
+  it('reaches the join link and Copy link with Tab, in that order', async () => {
+    const { user } = renderLobby(lobbyGuest)
+
+    await user.tab()
+    expect(screen.getByLabelText('Join link')).toHaveFocus()
+    await user.tab()
+    expect(screen.getByRole('button', { name: 'Copy link' })).toHaveFocus()
+
+    await user.keyboard('{Enter}')
+    expect(await screen.findByText(/Link copied/)).toBeVisible()
+  })
+
+  it('leaves nothing else in a guest’s tab order', async () => {
+    const { user } = renderLobby(lobbyGuest)
+
+    await user.tab()
+    await user.tab()
+    await user.tab()
+
+    // Wraps back to the body: no hidden or host-only control is focusable.
+    expect(document.body).toHaveFocus()
+  })
+})
+
+describe('copy join link without clipboard access', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('shows the manual-copy message when navigator.clipboard is missing (plain http)', async () => {
+    const { user } = renderLobby(lobbyGuest)
+    vi.spyOn(navigator, 'clipboard', 'get').mockReturnValue(undefined as unknown as Clipboard)
+
+    await user.click(screen.getByRole('button', { name: 'Copy link' }))
+
+    expect(await screen.findByText(/Couldn’t copy automatically/)).toHaveClass(
+      'lobby-link__status--failed',
+    )
+  })
+
+  it('replaces an earlier failure once a copy works', async () => {
+    const { user } = renderLobby(lobbyGuest)
+    const writeText = vi
+      .spyOn(navigator.clipboard, 'writeText')
+      .mockRejectedValueOnce(new Error('NotAllowedError'))
+
+    await user.click(screen.getByRole('button', { name: 'Copy link' }))
+    expect(await screen.findByText(/Couldn’t copy automatically/)).toBeVisible()
+
+    writeText.mockResolvedValueOnce(undefined)
+    await user.click(screen.getByRole('button', { name: 'Copy link' }))
+
+    expect(await screen.findByText(/Link copied/)).toBeVisible()
+    expect(screen.queryByText(/Couldn’t copy automatically/)).not.toBeInTheDocument()
+  })
+})
+
+describe('badges', () => {
+  it('gives the host both "Host" and "You" in their own lobby', () => {
+    renderLobby(lobbyHost)
+
+    expect(playerRow('Ava')).toHaveTextContent('Host')
+    expect(playerRow('Ava')).toHaveTextContent('You')
+    expect(playerRow('Ava')).toHaveClass('lobby-player--me')
+  })
+
+  it('marks only the viewer’s row with the "me" style, alongside the text', () => {
+    renderLobby(lobbyGuest)
+
+    expect(playerRow('Ben')).toHaveClass('lobby-player--me')
+    expect(playerRow('Ava')).not.toHaveClass('lobby-player--me')
   })
 })
