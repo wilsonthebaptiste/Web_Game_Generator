@@ -85,15 +85,16 @@ Read [`../plan.md`](../plan.md) first. The phase numbers here match it. Your wor
 ## Phase 4 — End Game, Resilience, and Hardening
 
 **Branch `fix/home-lobby-polish`:**
-- [ ] Mobile layout at 360px wide with no horizontal scroll. Large tap targets. A room code that can be read from across a room.
-- [ ] Keyboard access, visible focus rings, `<label>` on every input, sensible contrast.
-- [ ] Clear states for expired room, finished room, room not found, network failure, and rate limited.
-- [ ] A finished room opened by a non-member shows "This game has ended" and a link home.
+- [x] Mobile layout at 360px wide with no horizontal scroll. Large tap targets. A room code that can be read from across a room.
+- [x] Keyboard access, visible focus rings, `<label>` on every input, sensible contrast. Text contrast passes AA everywhere. Two non-text contrast gaps are in C's theme tokens and were sent to C (see findings).
+- [x] Clear states for expired room, finished room, room not found, network failure, and rate limited.
+- [x] A finished room opened by a non-member shows "This game has ended" and a link home.
+- [x] Open item 10 from C: `subscribeToRoom` refetches on the `system` "Subscribed to PostgreSQL" message instead of `SUBSCRIBED`.
 
 **Branch `test/lobby-ui`:**
-- [ ] Fill gaps in RTL coverage for home and lobby. Add a test that non-hosts never see host controls.
+- [x] Fill gaps in RTL coverage for home and lobby. Add a test that non-hosts never see host controls.
 
-**Manual check:** run the Room and Lobby section of `docs/manual-test-checklist.md` (from C) on a phone and a desktop.
+**Manual check:** run the Room and Lobby section of `docs/manual-test-checklist.md` (from C) on a phone and a desktop. ✅ Passed on 2026-10-20 against `dev` in Edge, with emulated 360px and 375px phones and a desktop window (33/33 checks, see [`contributor-a-findings.md`](contributor-a-findings.md)). A run on a real phone is still to do.
 
 ---
 
