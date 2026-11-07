@@ -26,3 +26,42 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+
+  # Production deploy to Cloudflare Pages (Direct Upload project `web-game-generator`), only for
+  # pushes to main that passed `check`. Skips with a warning until the two repo secrets exist.
+  deploy:
+    needs: check
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      # Public by design: both end up in the browser bundle. Never put a secret key here.
+      VITE_SUPABASE_URL: https://defxqdxgrwnwfhjtsaya.supabase.co
+      VITE_SUPABASE_ANON_KEY: sb_publishable_0DI9aIX-FsJMM24ms5Gpgg_ITSz6l_C
+    steps:
+      - id: gate
+        run: |
+          if [ -n "$CLOUDFLARE_API_TOKEN" ] && [ -n "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Cloudflare secrets not set; skipping the production deploy."
+          fi
+      - if: steps.gate.outputs.ready == 'true'
+        uses: actions/checkout@v4
+      - if: steps.gate.outputs.ready == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - if: steps.gate.outputs.ready == 'true'
+        run: npm ci && npm run build
+      - if: steps.gate.outputs.ready == 'true'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ env.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ env.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy dist --project-name=web-game-generator --branch=main
