@@ -26,6 +26,22 @@ decisions, answers to A and B, and open items.
 
 ---
 
+## Phase 5 — README (`docs/setup-readme`)
+
+Rewrote `README.md` as the one place to start: live URL, quick start with the `.env` values,
+playing from a phone (`--host`), multiplayer on one machine, scripts, database tests on the local
+stack, how migrations reach `dev` and `prod`, the content workflow, deployment, free-tier limits,
+how to restore a paused project, and known limitations.
+
+- **Free-tier limits were checked on 2026-11-07** against the Supabase pricing page and the
+  Cloudflare Pages limits page. Re-check on launch day. Cloudflare's page doesn't say whether
+  Direct Uploads count toward the 500 builds a month; at our merge rate it doesn't matter.
+- **Item 11 isn't decided yet.** The README documents the pause and the restore steps either way.
+- **Next:** A or B follows the README on a clean clone (plan item). Wilson offered README notes;
+  they go in a follow-up if they arrive after this merges.
+
+---
+
 ## Exit gates: Phases 3 and 4 passed (2026-10-22)
 
 Run on `dev` (`npm run dev -- --host` on C's machine, content sync #36 live) following

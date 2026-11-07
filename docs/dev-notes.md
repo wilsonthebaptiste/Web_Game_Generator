@@ -319,6 +319,9 @@ the note was only in the commit body.)
 - **`no-restricted-imports` uses a regex** (`(^|/)content(/|$)`) so it matches relative
   imports at any depth (`../../content/trivia`, `../../content`). It was checked with throwaway
   files: imports from a feature folder fail, while `src/content/` itself and `scripts/` pass.
+- **The README is the entry point for setup.** When a setup step, script, or limit changes,
+  update `README.md` in the same PR. Free-tier limits in it carry the date they were checked;
+  re-check them against the providers' pricing pages rather than trusting memory.
 
 ## GitHub and workflow
 
