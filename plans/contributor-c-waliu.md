@@ -130,7 +130,7 @@ Your PRs here unblock everyone. Aim to merge `chore/scaffold` on day one.
 - [x] Supabase Auth settings: add the production and preview URLs. (Production only, since there are no previews. Site URL set on `prod`; redirect URLs left empty because anonymous sign-in never redirects.)
 
 **Branch `docs/setup-readme`:**
-- [ ] README: prerequisites, clone → `.env` → run, test commands (including `test:db` + Docker), content workflow (B edits → `content:sync` → migration), deploy steps, free-tier limits checked on launch day, known limitations (host can't be reassigned, identity is per browser, room expiry).
+- [x] README: prerequisites, clone → `.env` → run, test commands (including `test:db` + Docker), content workflow (B edits → `content:sync` → migration), deploy steps, free-tier limits checked on launch day, known limitations (host can't be reassigned, identity is per browser, room expiry).
 - [ ] Ask A or B to follow the README on a clean clone and fix whatever they get stuck on.
 
 **Launch:**
