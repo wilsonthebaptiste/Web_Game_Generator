@@ -124,9 +124,10 @@ Your PRs here unblock everyone. Aim to merge `chore/scaffold` on day one.
 ## Phase 5 — Deployment and Launch
 
 **Branch `chore/deploy-config`:**
-- [ ] Apply all migrations, including the latest content sync, to `prod` with `supabase db push`. Run `test:db` against a local reset of the same migrations first.
+- [x] Apply all migrations, including the latest content sync, to `prod` with `supabase db push`. Run `test:db` against a local reset of the same migrations first.
 - [ ] Cloudflare Pages: connect the GitHub repo, production branch `main`, build `npm run build`, output `dist`. Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` for production (→ `prod`) and preview (→ `dev`) separately.
-- [ ] Supabase Auth settings: add the production and preview URLs.
+  - Changed: the repo is on Wilson's personal account, so Cloudflare's Git integration can't see it from Waliu's account. Instead it's a Direct Upload project (`web-game-generator`, live at https://web-game-generator.pages.dev), deployed by the `deploy` job in `ci.yml` after `check` passes on `main`. Waiting on Wilson to add the `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` repo secrets. No preview deploys; PRs are tested locally against `dev`.
+- [x] Supabase Auth settings: add the production and preview URLs. (Production only, since there are no previews. Site URL set on `prod`; redirect URLs left empty because anonymous sign-in never redirects.)
 
 **Branch `docs/setup-readme`:**
 - [ ] README: prerequisites, clone → `.env` → run, test commands (including `test:db` + Docker), content workflow (B edits → `content:sync` → migration), deploy steps, free-tier limits checked on launch day, known limitations (host can't be reassigned, identity is per browser, room expiry).

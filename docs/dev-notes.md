@@ -86,6 +86,15 @@ Newest entries go at the top of each section.
 
 ## Supabase
 
+- **The CLI is linked to `dev`, and must stay that way.** To change `prod`, link it, act, and
+  link back in the same sitting:
+  `npx supabase link --project-ref defxqdxgrwnwfhjtsaya` → `npx supabase db push --dry-run` →
+  `npx supabase db push` → `npx supabase link --project-ref nlpqfmsijyeyhfvssain`. Check
+  `supabase/.temp/project-ref` if unsure. A forgotten link means the next `db push` or
+  `db:types` hits production. Only C pushes to `prod`.
+- **A just-restored project needs a minute.** While its status is `COMING_UP`, `db push` fails
+  with "IPv6 is not supported"; wait for `ACTIVE_HEALTHY` (`npx supabase projects list`).
+
 - **Old rooms are deleted automatically.** A pg_cron job (`delete-old-rooms`, minute 17 of every
   hour) deletes rooms more than 24 hours old with their players, rounds, and answers. Rooms
   already stop working at 12 hours (`ROOM_EXPIRED`). To run it by hand in the SQL editor:
@@ -334,3 +343,23 @@ the note was only in the commit body.)
   can make squash the only option in Settings → General → Pull Requests.
 - **After a PR merges,** delete the branch on GitHub (button on the PR page) and locally with
   `git branch -d <branch>`.
+
+## Deployment
+
+- **The site is https://web-game-generator.pages.dev**, a Cloudflare Pages **Direct Upload**
+  project on Waliu's Cloudflare account. Cloudflare's Git integration only lists repos the
+  connecting GitHub user owns (or an org they can install apps on), and this repo is on
+  Wilson's personal account, so the Git option can't see it.
+- **Merges to `main` deploy themselves:** the `deploy` job in `ci.yml` runs after `check`
+  passes, builds with the `prod` Supabase URL and publishable key, and runs
+  `wrangler pages deploy dist`. It needs the `CLOUDFLARE_API_TOKEN` (Account → Cloudflare
+  Pages → Edit) and `CLOUDFLARE_ACCOUNT_ID` repo secrets; without them it skips with a warning.
+- **No preview deploys.** Test PRs locally against `dev`.
+- **The Supabase URL and key are baked in at build time** (Vite `VITE_*`), so changing them
+  means a new build, not a Cloudflare setting. Only the publishable key belongs there; check a
+  build with `grep -l sb_secret_ dist/assets/*.js` (must print nothing).
+- **Cloudflare's "Create application" now defaults to Workers.** For a Pages project, use the
+  "Continue to Pages" link at the bottom. Don't use "Clone a public repository": it copies the
+  repo into your own GitHub account and deploys the copy, which drifts from `main`.
+- **Emergency manual deploy:** build with the two `VITE_*` values from `ci.yml`, then drag
+  `dist` into the project's "Create deployment" in the Cloudflare dashboard.

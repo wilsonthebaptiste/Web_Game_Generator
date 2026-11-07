@@ -26,6 +26,46 @@ decisions, answers to A and B, and open items.
 
 ---
 
+## Phase 5 — Production site and database (`chore/deploy-config`)
+
+### Site (2026-11-07)
+
+Live at **https://web-game-generator.pages.dev** (Cloudflare Pages on Waliu's account).
+
+- **Decision: Direct Upload plus a CI deploy job, instead of Cloudflare's Git integration.** The
+  repo is on Wilson's personal GitHub account, so Cloudflare can't list it from Waliu's account.
+  The new `deploy` job in `ci.yml` builds and uploads after `check` passes on a push to `main`.
+  It stays skipped (with a warning) until Wilson adds the `CLOUDFLARE_API_TOKEN` and
+  `CLOUDFLARE_ACCOUNT_ID` repo secrets.
+- **Decision: no preview deploys.** The plan wanted previews pointing at `dev`; PRs are tested
+  locally against `dev` instead.
+- **First deploy was manual:** a local build with the `prod` URL and publishable key, dragged
+  into the dashboard. Checked: the bundle references only `prod` and contains no secret key;
+  `/`, the JS and CSS assets, and a deep link (`/room/ABCDE`) all return 200.
+- **Auth settings:** Site URL on `prod` is `https://web-game-generator.pages.dev`. Redirect URLs
+  stay empty: they're only for email links and OAuth, and anonymous sign-in never redirects.
+- **Still to do:** the first CI deploy after the secrets exist; Wilson's smoke tests and the
+  phone run on production.
+
+### Database (2026-10-22)
+
+`party-game-prod` was restored on 2026-10-22 (paused since 2026-10-18, item 11) and was healthy
+about 80 seconds later.
+
+- **Local reset first:** `npx supabase db reset` rebuilt the local database from the same eight
+  migrations; `test:db` 69/69.
+- **Pushed all eight migrations to `prod`** after a dry run (approved by Waliu). Checks on `prod`:
+  54/54 content items active, `delete-old-rooms` scheduled hourly at minute 17, all seven
+  RPCs present.
+- **Schema parity:** types generated from `prod` are byte-for-byte identical to
+  `src/types/database.ts` (generated from `dev`).
+- **Tests on `prod`:** `security.test.ts` and `reveal-rpcs.test.ts`, 30/30 (the expired-room
+  test is local only). That also confirms anonymous sign-ins are on. The test rooms are deleted
+  by the cleanup job after 24 hours.
+- The CLI is linked back to `dev` (see `docs/dev-notes.md`, Supabase).
+
+---
+
 ## Exit gates: Phases 3 and 4 passed (2026-10-22)
 
 Run on `dev` (`npm run dev -- --host` on C's machine, content sync #36 live) following
